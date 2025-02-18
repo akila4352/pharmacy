@@ -1,0 +1,111 @@
+/* Navbar Base Styles */
+header {
+  background-color: #fff;
+  height: 16vh;
+  box-shadow: 0 5px 30px rgb(0 22 84 / 10%);
+  padding: 15px 0;
+  position: sticky; /* Makes the navbar stick to the top during scrolling */
+  top: 0;
+  z-index: 1000; /* Ensure it is below the popup z-index */
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+header img {
+  width: 170px;
+}
+
+header a {
+  margin-left: 30px;
+  transition: 0.5s;
+  font-weight: 500;
+  text-decoration: none;
+  color: #000; /* Default color for links */
+}
+
+header a:hover {
+  color: #27ae60; /* Hover color for links */
+}
+
+header span {
+  width: auto;
+  padding: 0 6px;
+  background: #27ae60;
+  border-radius: 50px;
+  color: #ffffff;
+  margin-right: 4px;
+  font-weight: 400;
+}
+
+header h4 {
+  font-weight: 500;
+  margin-right: 20px;
+}
+
+header .toggle {
+  display: none;
+  cursor: pointer;
+  font-size: 24px;
+  color: #000;
+}
+
+/* Navbar Flexbox Layout */
+header .nav {
+  display: flex;
+  align-items: center;
+}
+
+header .nav .flex {
+  display: flex;
+  gap: 20px; /* Adjust spacing between nav items */
+}
+
+/* Button Styles */
+header .button {
+  margin-left: auto;
+}
+
+/* Responsive Styles */
+@media screen and (max-width: 768px) {
+  header {
+    padding: 10px 20px;
+    flex-wrap: wrap; /* Allows wrapping content on smaller screens */
+  }
+
+  header img {
+    margin-top: 10px;
+    width: 150px; /* Adjust logo size on small screens */
+  }
+
+  header .button {
+    display: none;
+  }
+
+  header .nav .flex {
+    display: none; /* Hide nav items initially */
+    flex-direction: column;
+    background-color: #27ae60;
+    position: absolute;
+    top: 10vh;
+    left: 0;
+    width: 100%;
+    padding: 20px;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+    z-index: 999; /* Ensure it stays below the popup */
+  }
+
+  header .nav .flex.show {
+    display: flex; /* Show nav items when toggle is active */
+  }
+
+  header li a {
+    display: block;
+    margin-bottom: 10px;
+    color: #fff; /* Change text color for mobile nav */
+  }
+
+  header .toggle {
+    display: block;
+  }
+}
