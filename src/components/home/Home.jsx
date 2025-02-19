@@ -1,5 +1,5 @@
 import React from "react"
-import Hero from "./hero/Hero"
+import Login from "../home/Login/Login"
 
 
 
@@ -8,7 +8,7 @@ const Home = () => {
   return (
     <>
 
-      <Hero />
+      <Login />
 
 
  
