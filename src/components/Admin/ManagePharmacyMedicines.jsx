@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { GoogleMap, Marker, useJsApiLoader } from "@react-google-maps/api";
 import Heading from "../common/Heading";
-
+import HeaderAdmin from "../common/header/HeaderAdmin";
 
 const ManagePharmacyMedicines = () => {
   const [message, setMessage] = useState("");
@@ -150,9 +150,12 @@ const ManagePharmacyMedicines = () => {
   if (!isLoaded) return <div>Loading...</div>;
 
   return (
+    <div><HeaderAdmin>
+      
+    </HeaderAdmin>
     <section className="hero">
       <div className="container">
-        <Heading title="Manage Medicine" />
+        <Heading title="Manage pharmacy" />
 
         <form className="flex" onSubmit={handleSearch}>
           <div className="box">
@@ -307,6 +310,7 @@ const ManagePharmacyMedicines = () => {
         )}
       </div>
     </section>
+   </div>
   );
 };
 

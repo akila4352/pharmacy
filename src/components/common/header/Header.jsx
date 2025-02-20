@@ -5,10 +5,6 @@ import "./header.css";
 const Header = () => {
   const [navList, setNavList] = useState(false); // State to toggle navigation list
  
-
-
- 
-
   return (
     <>
       <header>
@@ -19,15 +15,12 @@ const Header = () => {
           <div className="nav">
             <ul className={navList ? "small" : "flex"}>
               <li>
-                <Link to="/">Home</Link>
+                <Link to="/Hero">Home</Link>
               </li>
+   
               <li>
-                <Link to="/add-pharmacy">user</Link>
+                <Link to="/prescriptionScanner">prescriptionScanner</Link>
               </li>
-              <li>
-                <Link to="/manage-medicine">user</Link>
-              </li>
-        
             </ul>
           </div>
     

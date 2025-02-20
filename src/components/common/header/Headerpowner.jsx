@@ -18,15 +18,15 @@ const Headerpowner = () => {
           </div>
           <div className="nav">
             <ul className={navList ? "small" : "flex"}>
-              <li>
-                <Link to="/">Home</Link>
+            <li>
+                <Link to="/add-pharmacy">home</Link>
               </li>
               <li>
-                <Link to="/add-pharmacy">Add Pharmacy</Link>
+                <Link to="/manage-medicine">manage-medicine</Link>
               </li>
               <li>
-                <Link to="/manage-medicine">Manage Medicine</Link>
-              </li>
+                <Link to="/pharmacyInterface">pharmacyInterface</Link>
+                </li>
         
             </ul>
           </div>

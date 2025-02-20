@@ -2,7 +2,7 @@
 import React, { useState, useCallback } from "react";
 import { GoogleMap, Marker, useJsApiLoader } from "@react-google-maps/api";
 import Heading from "../common/Heading";
-
+import Headerpowner from "../common/header/Headerpowner";
 const AddPharmacy = () => {
   const [message, setMessage] = useState("");
   const [messageType, setMessageType] = useState("");
@@ -86,7 +86,7 @@ const AddPharmacy = () => {
 
   if (!isLoaded) return <div>Loading...</div>;
 
-  return (
+  return (  <div><Headerpowner></Headerpowner>
     <section className="hero">
       <div className="container">
         <Heading title="Add Pharmacy" />
@@ -204,7 +204,7 @@ const AddPharmacy = () => {
           </div>
         )}
       </div>
-    </section>
+    </section></div>
   );
 };
 export default AddPharmacy;

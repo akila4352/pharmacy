@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { GoogleMap, Marker, useJsApiLoader } from "@react-google-maps/api";
 import Heading from "../common/Heading";
-
+import Headerpowner from "../common/header/Headerpowner";
 const ManageMedicine = () => {
   const [message, setMessage] = useState("");
   const [messageType, setMessageType] = useState("");
@@ -149,6 +149,7 @@ const ManageMedicine = () => {
   if (!isLoaded) return <div>Loading...</div>;
 
   return (
+    <div><Headerpowner></Headerpowner>
     <section className="hero">
       <div className="container">
         <Heading title="Manage Medicine" />
@@ -305,7 +306,7 @@ const ManageMedicine = () => {
           </div>
         )}
       </div>
-    </section>
+    </section></div>
   );
 };
 

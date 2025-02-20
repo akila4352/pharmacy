@@ -5,12 +5,8 @@ import "./header.css";
 const HeaderAdmin = () => {
   const [navList, setNavList] = useState(false); // State to toggle navigation list
  
-
-
- 
-
   return (
-    <><HeaderAdmin/>
+
       <header>
         <div className="container flex">
           <div className="logo">
@@ -18,15 +14,11 @@ const HeaderAdmin = () => {
           </div>
           <div className="nav">
             <ul className={navList ? "small" : "flex"}>
+      
               <li>
-                <Link to="/">Home</Link>
+                <Link to="/add-pharmacy">Home</Link>
               </li>
-              <li>
-                <Link to="/add-pharmacy">Add Pharmacy</Link>
-              </li>
-              <li>
-                <Link to="/manage-medicine">Manage Medicine</Link>
-              </li>
+           
         
             </ul>
           </div>
@@ -40,7 +32,7 @@ const HeaderAdmin = () => {
       </header>
 
   
-    </>
+
   );
 };
 

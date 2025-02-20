@@ -8,7 +8,7 @@ import {
   useJsApiLoader,
 } from "@react-google-maps/api";
 import "./hero.css";
-
+import  Header from "../../common/header/Header";
 const Hero = () => {
   const [message, setMessage] = useState("");
   const [messageType, setMessageType] = useState("");
@@ -133,7 +133,9 @@ const handlePharmacyClick = (pharmacy) => {
   if (!isLoaded) return <div>Loading...</div>;
 
   return (
+   < div> <Header />
     <section className="hero">
+
       <div className="container">
         <p className="heading">Find your medicine easier.</p>
 
@@ -234,7 +236,8 @@ const handlePharmacyClick = (pharmacy) => {
           </div>
         )}
       </div>
-    </section>
+    </section></div>
+
   );
 };
 

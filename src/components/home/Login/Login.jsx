@@ -41,7 +41,7 @@ const Login = () => {
             navigate("/hero");
             break;
           case 'pharmacy':
-            navigate("/manage-medicine");
+            navigate("/add-pharmacy");
             break;
           case 'admin':
             navigate("/manage-Pharmacy-medicines");
