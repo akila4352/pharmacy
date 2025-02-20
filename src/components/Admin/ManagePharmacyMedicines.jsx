@@ -14,7 +14,7 @@ const ManagePharmacyMedicines = () => {
   const [editFormData, setEditFormData] = useState({});
 
   const { isLoaded } = useJsApiLoader({
-    googleMapsApiKey: "AlzaSyQ6tMVrSAOb2YwWc3u4OI6MAv7Cj9xO0YQ",
+    googleMapsApiKey: "AlzaSyYuXQcONmY0Fy-7r818WazltBm3VElC3Mh",
   });
 
   const mapContainerStyle = {

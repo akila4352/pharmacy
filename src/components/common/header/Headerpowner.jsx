@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import "./header.css";
 
-const Header = () => {
+const Headerpowner = () => {
   const [navList, setNavList] = useState(false); // State to toggle navigation list
  
 
@@ -44,4 +44,4 @@ const Header = () => {
   );
 };
 
-export default Header;
+export default Headerpowner;
