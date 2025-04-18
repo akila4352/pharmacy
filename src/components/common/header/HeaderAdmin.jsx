@@ -16,7 +16,7 @@ const HeaderAdmin = () => {
             <ul className={navList ? "small" : "flex"}>
       
               <li>
-                <Link to="/add-pharmacy">Home</Link>
+                <Link to="/manage-Pharmacy-medicines">Home</Link>
               </li>
            
         

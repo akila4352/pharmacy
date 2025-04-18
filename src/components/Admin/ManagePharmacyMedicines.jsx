@@ -1,114 +1,48 @@
+// src/components/ManagePharmacyMedicines.jsx
 import React, { useState } from "react";
-import { GoogleMap, Marker, useJsApiLoader } from "@react-google-maps/api";
 import Heading from "../common/Heading";
 import HeaderAdmin from "../common/header/HeaderAdmin";
+import {
+  MapContainer,
+  TileLayer,
+  Marker,
+  useMapEvents,
+} from "react-leaflet";
+import L from "leaflet";
+import "leaflet/dist/leaflet.css";
+
+const API_URL = process.env.REACT_APP_API_URL || "http://localhost:5000";
+
+const customMarkerIcon = new L.Icon({
+  iconUrl: "https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon.png",
+  iconSize: [25, 41],
+  iconAnchor: [12, 41],
+});
+
+const LocationMarker = ({ setSelectedLocation }) => {
+  useMapEvents({
+    click(e) {
+      setSelectedLocation(e.latlng);
+    },
+  });
+  return null;
+};
 
 const ManagePharmacyMedicines = () => {
   const [message, setMessage] = useState("");
   const [messageType, setMessageType] = useState("");
   const [showPopup, setShowPopup] = useState(false);
   const [selectedLocation, setSelectedLocation] = useState(null);
-  const [searchQuery, setSearchQuery] = useState({ medicineName: "" });
+  const [searchQuery, setSearchQuery] = useState("");
   const [pharmacies, setPharmacies] = useState([]);
-  const [editPharmacyId, setEditPharmacyId] = useState(null);
-  const [editFormData, setEditFormData] = useState({});
+  const [editId, setEditId] = useState(null);
+  const [editData, setEditData] = useState({});
 
-  const { isLoaded } = useJsApiLoader({
-    googleMapsApiKey: "AlzaSyYuXQcONmY0Fy-7r818WazltBm3VElC3Mh",
-  });
+  const defaultCenter = { lat: 6.0825, lng: 80.2973 };
 
-  const mapContainerStyle = {
-    width: "100%",
-    height: "400px",
-  };
-
-  const defaultCenter = {
-    lat: 6.08249715365853,
-    lng: 80.29727865317939,
-  };
-
-  const handleSearchChange = (e) => {
-    const { name, value } = e.target;
-    setSearchQuery({ ...searchQuery, [name]: value });
-  };
-
-  const handleMapClick = (e) => {
-    setSelectedLocation({
-      lat: e.latLng.lat(),
-      lng: e.latLng.lng(),
-    });
-  };
-
-  const handleEditClick = (pharmacy) => {
-    setEditPharmacyId(pharmacy.id);
-    setEditFormData({ ...pharmacy });
-  };
-
-  const handleEditChange = (e) => {
-    const { name, value } = e.target;
-    setEditFormData({ ...editFormData, [name]: value });
-  };
-
-  const handleSaveClick = async () => {
-    try {
-      const response = await fetch(
-        `http://localhost:8080/pharmacies/${editPharmacyId}`,
-        {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            ...editFormData,
-            price: parseFloat(editFormData.price),
-            latitude: parseFloat(editFormData.latitude),
-            longitude: parseFloat(editFormData.longitude),
-          }),
-        }
-      );
-
-      if (response.ok) {
-        const updatedPharmacy = await response.json();
-        setPharmacies((prev) =>
-          prev.map((pharmacy) =>
-            pharmacy.id === editPharmacyId ? updatedPharmacy : pharmacy
-          )
-        );
-        setEditPharmacyId(null);
-        setEditFormData({});
-        setMessage("Pharmacy updated successfully!");
-        setMessageType("success");
-      } else {
-        throw new Error("Failed to update pharmacy");
-      }
-    } catch (error) {
-      setMessage(`Error: ${error.message}`);
-      setMessageType("error");
-    }
-    setShowPopup(true);
-    setTimeout(() => setShowPopup(false), 3000);
-  };
-
-  const handleCancelClick = () => {
-    setEditPharmacyId(null);
-  };
-
-  const handleDelete = async (id) => {
-    try {
-      const response = await fetch(`http://localhost:8080/pharmacies/${id}`, {
-        method: "DELETE",
-      });
-      if (response.ok) {
-        setPharmacies(pharmacies.filter((pharmacy) => pharmacy.id !== id));
-        setMessage("Pharmacy deleted successfully!");
-        setMessageType("success");
-      } else {
-        throw new Error("Failed to delete pharmacy");
-      }
-    } catch (error) {
-      setMessage(`Error: ${error.message}`);
-      setMessageType("error");
-    }
+  const showMessage = (msg, type) => {
+    setMessage(msg);
+    setMessageType(type);
     setShowPopup(true);
     setTimeout(() => setShowPopup(false), 3000);
   };
@@ -116,203 +50,190 @@ const ManagePharmacyMedicines = () => {
   const handleSearch = async (e) => {
     e.preventDefault();
     if (!selectedLocation) {
-      setMessage("Please select a location on the map");
-      setMessageType("error");
-      setShowPopup(true);
-      setTimeout(() => setShowPopup(false), 3000);
+      showMessage("Please select a location on the map.", "error");
       return;
     }
-
     try {
-      const response = await fetch(
-        `http://localhost:8080/pharmacies/search?latitude=${selectedLocation.lat}&longitude=${selectedLocation.lng}&medicineName=${searchQuery.medicineName}`
+      const res = await fetch(
+        `${API_URL}/api/pharmacies/search?latitude=${selectedLocation.lat}&longitude=${selectedLocation.lng}&medicineName=${encodeURIComponent(searchQuery)}`
       );
-      if (response.ok) {
-        const data = await response.json();
-        setPharmacies(data);
-        if (data.length === 0) {
-          setMessage("No pharmacies found.");
-          setMessageType("info");
-          setShowPopup(true);
-          setTimeout(() => setShowPopup(false), 3000);
-        }
-      } else {
-        throw new Error("Failed to fetch pharmacies");
-      }
-    } catch (error) {
-      setMessage(`Error: ${error.message}`);
-      setMessageType("error");
-      setShowPopup(true);
-      setTimeout(() => setShowPopup(false), 3000);
+      if (!res.ok) throw new Error(await res.text());
+      const data = await res.json();
+      setPharmacies(data);
+      if (data.length === 0) showMessage("No pharmacies found.", "info");
+    } catch (err) {
+      showMessage(`Error: ${err.message}`, "error");
     }
   };
 
-  if (!isLoaded) return <div>Loading...</div>;
+  const handleEditClick = (ph) => {
+    setEditId(ph._id);
+    setEditData({
+      name: ph.name,
+      address: ph.address,
+      medicineName: ph.medicineName,
+      price: ph.price,
+      isAvailable: String(ph.isAvailable),
+      latitude: ph.location.coordinates[1],
+      longitude: ph.location.coordinates[0],
+    });
+  };
+
+  const handleEditChange = (e) => {
+    const { name, value } = e.target;
+    setEditData((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleSave = async () => {
+    try {
+      const body = {
+        name: editData.name,
+        address: editData.address,
+        medicineName: editData.medicineName,
+        price: parseFloat(editData.price),
+        isAvailable: editData.isAvailable === "true",
+        location: {
+          type: "Point",
+          coordinates: [parseFloat(editData.longitude), parseFloat(editData.latitude)],
+        },
+      };
+      const res = await fetch(`${API_URL}/api/pharmacies/${editId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      if (!res.ok) throw new Error(await res.text());
+      const updated = await res.json();
+      setPharmacies((prev) =>
+        prev.map((p) => (p._id === editId ? updated : p))
+      );
+      showMessage("Pharmacy updated successfully.", "success");
+      setEditId(null);
+    } catch (err) {
+      showMessage(`Error: ${err.message}`, "error");
+    }
+  };
+
+  const handleDelete = async (id) => {
+    try {
+      const res = await fetch(`${API_URL}/api/pharmacies/${id}`, {
+        method: "DELETE",
+      });
+      if (!res.ok) throw new Error(await res.text());
+      setPharmacies((prev) => prev.filter((p) => p._id !== id));
+      showMessage("Pharmacy deleted successfully.", "success");
+    } catch (err) {
+      showMessage(`Error: ${err.message}`, "error");
+    }
+  };
 
   return (
-    <div><HeaderAdmin>
-      
-    </HeaderAdmin>
-    <section className="hero">
-      <div className="container">
-        <Heading title="Manage pharmacy" />
+    <div>
+      <HeaderAdmin />
+      <section className="hero">
+        <div className="container">
+          <Heading title="Manage Pharmacy Medicines" />
+          <form className="flex" onSubmit={handleSearch}>
+            <div className="box">
+              <span>Medicine Name</span>
+              <input
+                type="text"
+                name="medicineName"
+                placeholder="Enter medicine name"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                required
+              />
+            </div>
+            <button className="btn1" type="submit">Search</button>
+          </form>
 
-        <form className="flex" onSubmit={handleSearch}>
-          <div className="box">
-            <span>Medicine Name</span>
-            <input
-              type="text"
-              placeholder="Enter medicine name"
-              name="medicineName"
-              value={searchQuery.medicineName}
-              onChange={handleSearchChange}
-              required
-            />
+          <div style={{ height: "400px", width: "100%", marginTop: "1rem" }}>
+            <MapContainer center={defaultCenter} zoom={13} style={{ height: "100%", width: "100%" }}>
+              <TileLayer
+                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                attribution='&copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors'
+              />
+              <LocationMarker setSelectedLocation={setSelectedLocation} />
+              {selectedLocation && (
+                <Marker position={selectedLocation} icon={customMarkerIcon} />
+              )}
+              {pharmacies.map((pharmacy) => (
+                <Marker
+                  key={pharmacy._id}
+                  position={{
+                    lat: pharmacy.location.coordinates[1],
+                    lng: pharmacy.location.coordinates[0],
+                  }}
+                  icon={customMarkerIcon}
+                />
+              ))}
+            </MapContainer>
           </div>
-          <button className="btn1" type="submit">
-            Search
-          </button>
-        </form>
 
-        <div>
-          <GoogleMap
-            mapContainerStyle={mapContainerStyle}
-            center={defaultCenter}
-            zoom={10}
-            onClick={handleMapClick}
-          >
-            {selectedLocation && (
-              <Marker
-                position={selectedLocation}
-                icon={{
-                  url: "http://maps.google.com/mapfiles/ms/icons/red-dot.png",
-                }}
-              />
-            )}
-            {pharmacies.map((pharmacy) => (
-              <Marker
-                key={pharmacy.id}
-                position={{ lat: pharmacy.latitude, lng: pharmacy.longitude }}
-                title={`${pharmacy.name} - ${pharmacy.medicineName}`}
-                icon={{
-                  url: "http://maps.google.com/mapfiles/ms/icons/blue-dot.png",
-                }}
-              />
-            ))}
-          </GoogleMap>
-        </div>
-
-        {pharmacies.length > 0 && (
-          <div className="results">
-            <h3>Search Results:</h3>
-            <table>
-              <thead>
-                <tr>
-                  <th>Actions</th>
-                  <th>Name</th>
-                  <th>Address</th>
-                  <th>Stock</th>
-                  <th>Price</th>
-                  <th>Medicine</th>
-                </tr>
-              </thead>
-              <tbody>
-                {pharmacies.map((pharmacy) => (
-                  <tr key={pharmacy.id}>
-                    {editPharmacyId === pharmacy.id ? (
-                      <>
-                        <td>
-                          <button className="btn-action btn-save" onClick={handleSaveClick}>
-                            💾
-                          </button>
-                          <button className="btn-action btn-cancel" onClick={handleCancelClick}>
-                            ❌
-                          </button>
-                        </td>
-                        <td>
-                          <input
-                            type="text"
-                            name="name"
-                            value={editFormData.name}
-                            onChange={handleEditChange}
-                          />
-                        </td>
-                        <td>
-                          <input
-                            type="text"
-                            name="address"
-                            value={editFormData.address}
-                            onChange={handleEditChange}
-                          />
-                        </td>
-                        <td>
-                          <select
-                            name="isAvailable"
-                            value={editFormData.isAvailable}
-                            onChange={handleEditChange}
-                          >
-                            <option value={true}>Available</option>
-                            <option value={false}>Not Available</option>
-                          </select>
-                        </td>
-                        <td>
-                          <input
-                            type="number"
-                            name="price"
-                            value={editFormData.price}
-                            onChange={handleEditChange}
-                            step="0.01"
-                          />
-                        </td>
-                        <td>
-                          <input
-                            type="text"
-                            name="medicineName"
-                            value={editFormData.medicineName}
-                            onChange={handleEditChange}
-                          />
-                        </td>
-                      </>
-                    ) : (
-                      <>
-                        <td>
-                          <button
-                            className="btn-action btn-update"
-                            onClick={() => handleEditClick(pharmacy)}
-                          >
-                            🖉
-                          </button>
-                          <button
-                            className="btn-action btn-delete"
-                            onClick={() => handleDelete(pharmacy.id)}
-                          >
-                            ❌
-                          </button>
-                        </td>
-                        <td>{pharmacy.name}</td>
-                        <td>{pharmacy.address}</td>
-                        <td>{pharmacy.isAvailable ? "Available" : "Not Available"}</td>
-                        <td>{pharmacy.price}</td>
-                        <td>{pharmacy.medicineName}</td>
-                      </>
-                    )}
+          {pharmacies.length > 0 && (
+            <div className="results" style={{ marginTop: "2rem" }}>
+              <h3>Search Results:</h3>
+              <table>
+                <thead>
+                  <tr>
+                    <th>Actions</th>
+                    <th>Name</th>
+                    <th>Address</th>
+                    <th>Stock</th>
+                    <th>Price</th>
+                    <th>Medicine</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+                </thead>
+                <tbody>
+                  {pharmacies.map((pharmacy) => (
+                    <tr key={pharmacy._id}>
+                      {editId === pharmacy._id ? (
+                        <>
+                          <td>
+                            <button className="btn-action" onClick={handleSave}>💾</button>
+                            <button className="btn-action" onClick={() => setEditId(null)}>❌</button>
+                          </td>
+                          <td><input name="name" value={editData.name} onChange={handleEditChange} /></td>
+                          <td><input name="address" value={editData.address} onChange={handleEditChange} /></td>
+                          <td>
+                            <select name="isAvailable" value={editData.isAvailable} onChange={handleEditChange}>
+                              <option value="true">Available</option>
+                              <option value="false">Not Available</option>
+                            </select>
+                          </td>
+                          <td><input name="price" type="number" value={editData.price} onChange={handleEditChange} /></td>
+                          <td><input name="medicineName" value={editData.medicineName} onChange={handleEditChange} /></td>
+                        </>
+                      ) : (
+                        <>
+                          <td>
+                            <button className="btn-action" onClick={() => handleEditClick(pharmacy)}>🖉</button>
+                            <button className="btn-action" onClick={() => handleDelete(pharmacy._id)}>❌</button>
+                          </td>
+                          <td>{pharmacy.name}</td>
+                          <td>{pharmacy.address}</td>
+                          <td>{pharmacy.isAvailable ? "Available" : "Not Available"}</td>
+                          <td>{pharmacy.price}</td>
+                          <td>{pharmacy.medicineName}</td>
+                        </>
+                      )}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
 
-        {showPopup && (
-          <div className={`popup ${messageType}`}>
-            <p>{message}</p>
-          </div>
-        )}
-      </div>
-    </section>
-   </div>
+          {showPopup && (
+            <div className={`popup ${messageType}`}>
+              <p>{message}</p>
+            </div>
+          )}
+        </div>
+      </section>
+    </div>
   );
 };
-
 
 export default ManagePharmacyMedicines;
