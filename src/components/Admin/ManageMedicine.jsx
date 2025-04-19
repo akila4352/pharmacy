@@ -1,281 +1,427 @@
-// src/components/ManageMedicine.jsx
-import React, { useState } from "react";
-import { MapContainer, TileLayer, Marker, useMapEvents } from "react-leaflet";
-import L from "leaflet";
-import "leaflet/dist/leaflet.css";
-import Heading from "../common/Heading";
-import Headerpowner from "../common/header/Headerpowner";
+import React, { useState, useEffect } from 'react';
+import axios from 'axios';
+import * as XLSX from 'xlsx';
 
-const API_URL = process.env.REACT_APP_API_URL || "http://localhost:5000";
-
-const customMarkerIcon = new L.Icon({
-  iconUrl: "https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon.png",
-  iconSize: [25, 41],
-  iconAnchor: [12, 41],
-});
-
-const LocationMarker = ({ setSelectedLocation }) => {
-  useMapEvents({
-    click(e) {
-      setSelectedLocation(e.latlng);
-    },
+const PharmacyMedicineManagement = () => {
+  const [medicines, setMedicines] = useState([]);
+  const [newMedicine, setNewMedicine] = useState({
+    name: '',
+    dosage: '',
+    price: '',
+    quantity: '',
   });
-  return null;
-};
+  const [file, setFile] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [editingId, setEditingId] = useState(null);
 
-const ManageMedicine = () => {
-  const [message, setMessage] = useState("");
-  const [messageType, setMessageType] = useState("");
-  const [showPopup, setShowPopup] = useState(false);
-  const [selectedLocation, setSelectedLocation] = useState(null);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [pharmacies, setPharmacies] = useState([]);
-  const [editId, setEditId] = useState(null);
-  const [editData, setEditData] = useState({});
+  // Get pharmacy user ID from local storage
+  const user = JSON.parse(localStorage.getItem('user'));
+  const pharmacyId = user?.id;
+  const token = localStorage.getItem('token');
 
-  const defaultCenter = { lat: 6.0825, lng: 80.2973 };
-
-  const handleSearch = async (e) => {
-    e.preventDefault();
-    if (!selectedLocation) {
-      showMessage("Please select a location on the map.", "error");
-      return;
+  // Set up axios headers with authentication token
+  const authAxios = axios.create({
+    baseURL: 'http://localhost:5000',
+    headers: {
+      Authorization: `Bearer ${token}`
     }
-    try {
-      const res = await fetch(
-        `${API_URL}/api/pharmacies/search?latitude=${selectedLocation.lat}&longitude=${selectedLocation.lng}&medicineName=${encodeURIComponent(searchQuery)}`
-      );
-      if (!res.ok) throw new Error("Search failed");
-      const data = await res.json();
-      setPharmacies(data);
-      if (data.length === 0) showMessage("No pharmacies found", "info");
-    } catch (err) {
-      showMessage(`Error: ${err.message}`, "error");
-    }
-  };
+  });
 
-  const showMessage = (msg, type) => {
-    setMessage(msg);
-    setMessageType(type);
-    setShowPopup(true);
-    setTimeout(() => setShowPopup(false), 3000);
-  };
+  // Fetch pharmacy's medicines on component mount
+  useEffect(() => {
+    const fetchMedicines = async () => {
+      if (!pharmacyId) return;
+      
+      setLoading(true);
+      try {
+        const response = await authAxios.get(`/api/medicines/pharmacy/${pharmacyId}`);
+        setMedicines(response.data);
+      } catch (err) {
+        setError('Failed to fetch medicines');
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  const handleEditClick = (ph) => {
-    setEditId(ph._id);
-    setEditData({
-      name: ph.name,
-      address: ph.address,
-      medicineName: ph.medicineName,
-      price: ph.price,
-      isAvailable: ph.isAvailable,
-      latitude: ph.location.coordinates[1],
-      longitude: ph.location.coordinates[0],
+    fetchMedicines();
+  }, [pharmacyId]);
+
+  const handleInputChange = (e) => {
+    setNewMedicine({ 
+      ...newMedicine, 
+      [e.target.name]: e.target.value 
     });
   };
 
-  const handleEditChange = (e) => {
-    const { name, value } = e.target;
-    setEditData((prev) => ({ ...prev, [name]: value }));
+  const handleFileChange = (e) => {
+    setFile(e.target.files[0]);
+    // Clear any previous errors
+    setError('');
   };
 
-  const handleSave = async () => {
+  const handleAddMedicine = async (e) => {
+    e.preventDefault();
+    
     try {
-      const body = {
-        name: editData.name,
-        address: editData.address,
-        medicineName: editData.medicineName,
-        price: parseFloat(editData.price),
-        isAvailable: editData.isAvailable === "true",
-        location: {
-          type: "Point",
-          coordinates: [
-            parseFloat(editData.longitude),
-            parseFloat(editData.latitude),
-          ],
-        },
+      // Add pharmacyId to the medicine data
+      const medicineData = {
+        ...newMedicine,
+        pharmacyId,
+        // Convert number strings to actual numbers
+        price: parseFloat(newMedicine.price),
+        quantity: parseInt(newMedicine.quantity, 10)
       };
-      const res = await fetch(`${API_URL}/api/pharmacies/${editId}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
+      
+      const response = await authAxios.post('/api/medicines', medicineData);
+      
+      // Update the medicines list
+      setMedicines([...medicines, response.data]);
+      
+      // Reset the form
+      setNewMedicine({
+        name: '',
+        dosage: '',
+        price: '',
+        quantity: '',
       });
-      if (!res.ok) throw new Error("Update failed");
-      const updated = await res.json();
-      setPharmacies((prev) =>
-        prev.map((ph) => (ph._id === editId ? updated : ph))
-      );
-      showMessage("Updated successfully", "success");
-      setEditId(null);
+      
+      alert('Medicine added successfully!');
     } catch (err) {
-      showMessage(`Error: ${err.message}`, "error");
+      setError('Error adding medicine: ' + (err.response?.data?.error || err.message));
+      console.error(err);
+    }
+  };
+
+// Update the handleBulkUpload function in your React component
+
+const handleBulkUpload = async () => {
+  if (!file) {
+    return setError('Please select a file');
+  }
+
+  setLoading(true);
+  try {
+    const data = await file.arrayBuffer();
+    const workbook = XLSX.read(data);
+    const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+    const jsonData = XLSX.utils.sheet_to_json(worksheet);
+    
+    if (jsonData.length === 0) {
+      setError('The file is empty or not formatted correctly');
+      setLoading(false);
+      return;
+    }
+    
+    // Validate each row in the Excel data
+    const validData = jsonData.map(item => {
+      // Ensure all required fields exist and convert to appropriate types
+      return {
+        name: String(item.name || ''),
+        dosage: String(item.dosage || ''),
+        price: parseFloat(item.price) || 0,
+        quantity: parseInt(item.quantity, 10) || 0,
+      };
+    }).filter(item => item.name && item.dosage); // Filter out invalid entries
+    
+    if (validData.length === 0) {
+      setError('No valid medicine data found in the file');
+      setLoading(false);
+      return;
+    }
+    
+    // Send valid data to server - this is the key fix
+    await authAxios.post('/api/medicines/bulk', validData);
+
+    // Refresh medicines list - use the correct endpoint
+    const response = await authAxios.get('/api/medicines');
+    setMedicines(response.data);
+    
+    setFile(null);
+    // Reset the file input 
+    document.getElementById('file-input').value = '';
+    alert(`Bulk import successful! Imported ${validData.length} medicines.`);
+  } catch (err) {
+    setError('Bulk import failed: ' + (err.response?.data?.error || err.message));
+    console.error(err);
+  } finally {
+    setLoading(false);
+  }
+};
+
+  const handleEdit = (medicine) => {
+    setEditingId(medicine._id);
+    setNewMedicine({
+      name: medicine.name,
+      dosage: medicine.dosage,
+      price: medicine.price,
+      quantity: medicine.quantity
+    });
+  };
+
+  const handleUpdate = async () => {
+    try {
+      const updatedMedicine = {
+        ...newMedicine,
+        pharmacyId,
+        price: parseFloat(newMedicine.price),
+        quantity: parseInt(newMedicine.quantity, 10)
+      };
+      
+      await authAxios.put(`/api/medicines/${editingId}`, updatedMedicine);
+      
+      // Update the medicines list
+      setMedicines(medicines.map(med => 
+        med._id === editingId ? {...med, ...updatedMedicine} : med
+      ));
+      
+      // Reset form and editing state
+      setNewMedicine({
+        name: '',
+        dosage: '',
+        price: '',
+        quantity: '',
+      });
+      setEditingId(null);
+      
+      alert('Medicine updated successfully!');
+    } catch (err) {
+      setError('Error updating medicine: ' + (err.response?.data?.error || err.message));
+      console.error(err);
     }
   };
 
   const handleDelete = async (id) => {
-    try {
-      const res = await fetch(`${API_URL}/api/pharmacies/${id}`, {
-        method: "DELETE",
-      });
-      if (!res.ok) throw new Error("Delete failed");
-      setPharmacies((prev) => prev.filter((ph) => ph._id !== id));
-      showMessage("Deleted successfully", "success");
-    } catch (err) {
-      showMessage(`Error: ${err.message}`, "error");
+    if (window.confirm('Are you sure you want to delete this medicine?')) {
+      try {
+        await authAxios.delete(`/api/medicines/${id}`);
+        
+        // Update the medicines list
+        setMedicines(medicines.filter(med => med._id !== id));
+        
+        alert('Medicine deleted successfully!');
+      } catch (err) {
+        setError('Error deleting medicine: ' + (err.response?.data?.error || err.message));
+        console.error(err);
+      }
     }
   };
 
+  const handleCancelEdit = () => {
+    setEditingId(null);
+    setNewMedicine({
+      name: '',
+      dosage: '',
+      price: '',
+      quantity: '',
+    });
+  };
+
+  // Sample template download
+  const downloadTemplate = () => {
+    // Create a sample template with proper column headers
+    const template = [
+      { name: 'Example Medicine', dosage: '500mg', price: 10.99, quantity: 100 }
+    ];
+    
+    const worksheet = XLSX.utils.json_to_sheet(template);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Medicines');
+    XLSX.writeFile(workbook, 'medicine_template.xlsx');
+  };
+
   return (
-    <div>
-      <Headerpowner />
-      <section className="hero">
-        <div className="container">
-          <Heading title="Manage Medicine" />
-          <form className="flex" onSubmit={handleSearch}>
-            <input
-              type="text"
-              placeholder="Medicine"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              required
-            />
-            <button className="btn1" type="submit">
-              Search
-            </button>
-          </form>
-
-          {showPopup && <div className={`popup ${messageType}`}>{message}</div>}
-
-          <div style={{ height: "400px", width: "100%", marginTop: "1rem" }}>
-            <MapContainer
-              center={defaultCenter}
-              zoom={13}
-              style={{ height: "100%", width: "100%" }}
-            >
-              <TileLayer
-                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                attribution='&copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors'
+    <div className="p-4 max-w-6xl mx-auto">
+      <h1 className="text-2xl font-bold mb-6">Pharmacy Medicine Management</h1>
+      
+      {error && <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">{error}</div>}
+      
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* Add/Edit Medicine Form */}
+        <div className="bg-white p-6 rounded-lg shadow-md">
+          <h2 className="text-xl font-semibold mb-4">
+            {editingId ? 'Edit Medicine' : 'Add New Medicine'}
+          </h2>
+          
+          <form onSubmit={editingId ? undefined : handleAddMedicine} className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Medicine Name</label>
+              <input
+                type="text"
+                name="name"
+                value={newMedicine.name}
+                onChange={handleInputChange}
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring focus:ring-blue-200 p-2 border"
+                required
               />
-              <LocationMarker setSelectedLocation={setSelectedLocation} />
-              {selectedLocation && (
-                <Marker position={selectedLocation} icon={customMarkerIcon} />
-              )}
-              {pharmacies.map((ph) => (
-                <Marker
-                  key={ph._id}
-                  position={{
-                    lat: ph.location.coordinates[1],
-                    lng: ph.location.coordinates[0],
-                  }}
-                  icon={customMarkerIcon}
-                />
-              ))}
-            </MapContainer>
-          </div>
-
-          {pharmacies.length > 0 && (
-            <div className="results">
-              <h3>Search Results:</h3>
-              <table>
-                <thead>
-                  <tr>
-                    <th>Actions</th>
-                    <th>Name</th>
-                    <th>Address</th>
-                    <th>Stock</th>
-                    <th>Price</th>
-                    <th>Medicine</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {pharmacies.map((ph) => (
-                    <tr key={ph._id}>
-                      {editId === ph._id ? (
-                        <>
-                          <td>
-                            <button className="btn-action" onClick={handleSave}>
-                              💾
-                            </button>
-                            <button
-                              className="btn-action"
-                              onClick={() => setEditId(null)}
-                            >
-                              ❌
-                            </button>
-                          </td>
-                          <td>
-                            <input
-                              name="name"
-                              value={editData.name}
-                              onChange={handleEditChange}
-                            />
-                          </td>
-                          <td>
-                            <input
-                              name="address"
-                              value={editData.address}
-                              onChange={handleEditChange}
-                            />
-                          </td>
-                          <td>
-                            <select
-                              name="isAvailable"
-                              value={editData.isAvailable}
-                              onChange={handleEditChange}
-                            >
-                              <option value="true">Available</option>
-                              <option value="false">Not Available</option>
-                            </select>
-                          </td>
-                          <td>
-                            <input
-                              name="price"
-                              type="number"
-                              value={editData.price}
-                              onChange={handleEditChange}
-                            />
-                          </td>
-                          <td>
-                            <input
-                              name="medicineName"
-                              value={editData.medicineName}
-                              onChange={handleEditChange}
-                            />
-                          </td>
-                        </>
-                      ) : (
-                        <>
-                          <td>
-                            <button
-                              className="btn-action"
-                              onClick={() => handleEditClick(ph)}
-                            >
-                              🖉
-                            </button>
-                            <button
-                              className="btn-action"
-                              onClick={() => handleDelete(ph._id)}
-                            >
-                              ❌
-                            </button>
-                          </td>
-                          <td>{ph.name}</td>
-                          <td>{ph.address}</td>
-                          <td>{ph.isAvailable ? "Available" : "Not Available"}</td>
-                          <td>{ph.price}</td>
-                          <td>{ph.medicineName}</td>
-                        </>
-                      )}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
             </div>
-          )}
+            
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Dosage</label>
+              <input
+                type="text"
+                name="dosage"
+                value={newMedicine.dosage}
+                onChange={handleInputChange}
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring focus:ring-blue-200 p-2 border"
+                required
+              />
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Price</label>
+              <input
+                type="number"
+                name="price"
+                value={newMedicine.price}
+                onChange={handleInputChange}
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring focus:ring-blue-200 p-2 border"
+                required
+                step="0.01"
+                min="0"
+              />
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Quantity</label>
+              <input
+                type="number"
+                name="quantity"
+                value={newMedicine.quantity}
+                onChange={handleInputChange}
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring focus:ring-blue-200 p-2 border"
+                required
+                min="0"
+              />
+            </div>
+            
+            <div className="flex space-x-2">
+              {editingId ? (
+                <>
+                  <button 
+                    type="button" 
+                    onClick={handleUpdate}
+                    className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+                  >
+                    Update Medicine
+                  </button>
+                  <button 
+                    type="button" 
+                    onClick={handleCancelEdit}
+                    className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600"
+                  >
+                    Cancel
+                  </button>
+                </>
+              ) : (
+                <button 
+                  type="submit" 
+                  className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700"
+                >
+                  Add Medicine
+                </button>
+              )}
+            </div>
+          </form>
         </div>
-      </section>
+        
+        {/* Bulk Import */}
+        <div className="bg-white p-6 rounded-lg shadow-md">
+          <h2 className="text-xl font-semibold mb-4">Bulk Import Medicines</h2>
+          
+          <div className="space-y-4">
+            <p className="text-sm text-gray-600">
+              Upload an Excel file with your medicines data. Each row should contain name, dosage, price, and quantity columns.
+            </p>
+            
+            <div className="bg-yellow-50 p-3 rounded-md border border-yellow-200">
+              <p className="text-sm text-yellow-800">
+                <strong>Note:</strong> The Excel file must have columns named exactly:
+                <br />
+                <code>name</code>, <code>dosage</code>, <code>price</code>, <code>quantity</code>
+              </p>
+            </div>
+            
+            <button 
+              onClick={downloadTemplate}
+              className="text-blue-600 underline text-sm hover:text-blue-800"
+            >
+              Download template file
+            </button>
+            
+            <div className="mt-2">
+              <label className="block text-sm font-medium text-gray-700">Select File</label>
+              <input 
+                id="file-input"
+                type="file" 
+                accept=".xlsx,.xls,.csv" 
+                onChange={handleFileChange}
+                className="mt-1 block w-full"
+              />
+            </div>
+            
+            <button
+              onClick={handleBulkUpload}
+              disabled={loading || !file}
+              className={`w-full ${loading || !file ? 'bg-gray-400' : 'bg-blue-600 hover:bg-blue-700'} text-white px-4 py-2 rounded`}
+            >
+              {loading ? 'Uploading...' : 'Upload Medicines'}
+            </button>
+          </div>
+        </div>
+      </div>
+      
+      {/* Medicines List */}
+      <div className="mt-8">
+        <h2 className="text-xl font-semibold mb-4">Your Medicines</h2>
+        
+        {loading && !medicines.length ? (
+          <p>Loading medicines...</p>
+        ) : medicines.length === 0 ? (
+          <p>No medicines found. Add your first medicine above.</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Dosage</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Price</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Quantity</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {medicines.map((medicine) => (
+                  <tr key={medicine._id}>
+                    <td className="px-6 py-4 whitespace-nowrap">{medicine.name}</td>
+                    <td className="px-6 py-4 whitespace-nowrap">{medicine.dosage}</td>
+                    <td className="px-6 py-4 whitespace-nowrap">${parseFloat(medicine.price).toFixed(2)}</td>
+                    <td className="px-6 py-4 whitespace-nowrap">{medicine.quantity}</td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <button
+                        onClick={() => handleEdit(medicine)}
+                        className="text-blue-600 hover:text-blue-900 mr-3"
+                      >
+                        Edit
+                      </button>
+                      <button
+                        onClick={() => handleDelete(medicine._id)}
+                        className="text-red-600 hover:text-red-900"
+                      >
+                        Delete
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
     </div>
   );
 };
 
-export default ManageMedicine;
+export default PharmacyMedicineManagement;
