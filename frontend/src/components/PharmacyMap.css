@@ -1,0 +1,27 @@
+.pharmacy-map {
+    text-align: center;
+  }
+  
+  .pharmacy-details {
+    margin-top: 20px;
+  }
+  
+  table {
+    margin: 0 auto;
+    border-collapse: collapse;
+    width: 80%;
+  }
+  
+  table, th, td {
+    border: 1px solid #ddd;
+  }
+  
+  th, td {
+    padding: 10px;
+    text-align: center;
+  }
+  
+  th {
+    background-color: #f4f4f4;
+  }
+  
