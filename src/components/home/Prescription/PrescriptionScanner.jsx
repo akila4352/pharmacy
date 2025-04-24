@@ -1,9 +1,15 @@
-import React, { useState } from "react";
+import React, { useState, useRef, useCallback } from "react";
 import Header from "../../common/header/Header";
+import Webcam from "react-webcam";
 
 const PrescriptionScanner = () => {
   const [showOptions, setShowOptions] = useState(false);
   const [selectedFile, setSelectedFile] = useState(null);
+  const [showCamera, setShowCamera] = useState(false);
+  const [capturedImage, setCapturedImage] = useState(null);
+  const [isFrontCamera, setIsFrontCamera] = useState(false);
+  
+  const webcamRef = useRef(null);
 
   const handleFileChange = (event) => {
     const file = event.target.files[0];
@@ -19,7 +25,74 @@ const PrescriptionScanner = () => {
     if (option === "device") {
       document.getElementById("fileInputDevice").click();
     } else if (option === "camera") {
-      document.getElementById("fileInputCamera").click();
+      // Open the webcam interface
+      setShowCamera(true);
+    }
+  };
+
+  const capture = useCallback(() => {
+    if (webcamRef.current) {
+      const imageSrc = webcamRef.current.getScreenshot();
+      setCapturedImage(imageSrc);
+      
+      // Convert base64 to file object
+      if (imageSrc) {
+        const byteString = atob(imageSrc.split(',')[1]);
+        const mimeString = imageSrc.split(',')[0].split(':')[1].split(';')[0];
+        const ab = new ArrayBuffer(byteString.length);
+        const ia = new Uint8Array(ab);
+        
+        for (let i = 0; i < byteString.length; i++) {
+          ia[i] = byteString.charCodeAt(i);
+        }
+        
+        const blob = new Blob([ab], { type: mimeString });
+        const file = new File([blob], "camera_capture.jpg", { type: "image/jpeg" });
+        setSelectedFile(file);
+      }
+    }
+  }, [webcamRef]);
+
+  const retake = () => {
+    setCapturedImage(null);
+  };
+
+  const switchCamera = () => {
+    setIsFrontCamera(!isFrontCamera);
+  };
+
+  const closeCamera = () => {
+    setShowCamera(false);
+    if (!capturedImage) {
+      setCapturedImage(null);
+    }
+  };
+
+  const handleSubmit = async () => {
+    // Here you would handle submitting the prescription image
+    if (selectedFile) {
+      // Create FormData for API submission
+      const formData = new FormData();
+      formData.append('prescription', selectedFile);
+      
+      try {
+        console.log("Submitting prescription...", selectedFile);
+        // Implement API call here
+        // const response = await fetch('your-api-endpoint', {
+        //   method: 'POST',
+        //   body: formData,
+        // });
+        
+        alert("Prescription submitted successfully!");
+        // Reset states
+        setSelectedFile(null);
+        setCapturedImage(null);
+      } catch (error) {
+        console.error("Error submitting prescription:", error);
+        alert("Failed to submit prescription. Please try again.");
+      }
+    } else {
+      alert("Please capture or select a prescription image first.");
     }
   };
 
@@ -38,23 +111,27 @@ const PrescriptionScanner = () => {
           <h2 style={{ textAlign: "center", marginBottom: "20px" }}>
             Prescription Scanner
           </h2>
-          <button
-            onClick={() => setShowOptions(true)}
-            style={{
-              padding: "10px 20px",
-              backgroundColor: "#007bff",
-              color: "white",
-              border: "none",
-              borderRadius: "4px",
-              cursor: "pointer",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: "8px",
-            }}
-          >
-            📸 Capture Prescription
-          </button>
+          
+          {!showCamera && !capturedImage && (
+            <button
+              onClick={() => setShowOptions(true)}
+              style={{
+                padding: "10px 20px",
+                backgroundColor: "#007bff",
+                color: "white",
+                border: "none",
+                borderRadius: "4px",
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: "8px",
+                margin: "0 auto",
+              }}
+            >
+              📸 Capture Prescription
+            </button>
+          )}
 
           {/* Hidden File Inputs */}
           <input
@@ -73,6 +150,66 @@ const PrescriptionScanner = () => {
             onChange={handleFileChange}
           />
 
+          {/* Camera Interface */}
+          {showCamera && !capturedImage && (
+            <div style={{ marginTop: "20px", textAlign: "center" }}>
+              <Webcam
+                audio={false}
+                ref={webcamRef}
+                screenshotFormat="image/jpeg"
+                videoConstraints={{
+                  facingMode: isFrontCamera ? "user" : "environment",
+                }}
+                style={{
+                  width: "100%", 
+                  borderRadius: "8px",
+                  boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
+                }}
+              />
+              <div style={{ marginTop: "15px", display: "flex", justifyContent: "center", gap: "10px" }}>
+                <button 
+                  onClick={capture}
+                  style={{
+                    padding: "10px 20px",
+                    backgroundColor: "#28a745",
+                    color: "white",
+                    border: "none",
+                    borderRadius: "4px",
+                    cursor: "pointer",
+                  }}
+                >
+                  Capture Photo
+                </button>
+                <button 
+                  onClick={switchCamera}
+                  style={{
+                    padding: "10px 20px",
+                    backgroundColor: "#6c757d",
+                    color: "white",
+                    border: "none",
+                    borderRadius: "4px",
+                    cursor: "pointer",
+                  }}
+                >
+                  Switch Camera
+                </button>
+                <button 
+                  onClick={closeCamera}
+                  style={{
+                    padding: "10px 20px",
+                    backgroundColor: "#dc3545",
+                    color: "white",
+                    border: "none",
+                    borderRadius: "4px",
+                    cursor: "pointer",
+                  }}
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* Modal for Options */}
           {showOptions && (
             <div
@@ -86,6 +223,7 @@ const PrescriptionScanner = () => {
                 display: "flex",
                 justifyContent: "center",
                 alignItems: "center",
+                zIndex: 1000,
               }}
             >
               <div
@@ -103,6 +241,10 @@ const PrescriptionScanner = () => {
                     margin: "10px",
                     padding: "10px 20px",
                     cursor: "pointer",
+                    backgroundColor: "#007bff",
+                    color: "white",
+                    border: "none",
+                    borderRadius: "4px",
                   }}
                 >
                   Upload from Device
@@ -113,6 +255,10 @@ const PrescriptionScanner = () => {
                     margin: "10px",
                     padding: "10px 20px",
                     cursor: "pointer",
+                    backgroundColor: "#28a745",
+                    color: "white",
+                    border: "none",
+                    borderRadius: "4px",
                   }}
                 >
                   Open Camera
@@ -122,8 +268,10 @@ const PrescriptionScanner = () => {
                   style={{
                     marginTop: "20px",
                     padding: "10px 20px",
-                    backgroundColor: "red",
+                    backgroundColor: "#dc3545",
                     color: "white",
+                    border: "none",
+                    borderRadius: "4px",
                     cursor: "pointer",
                   }}
                 >
@@ -133,19 +281,79 @@ const PrescriptionScanner = () => {
             </div>
           )}
 
-          {selectedFile && (
-            <div style={{ marginTop: "20px" }}>
-              <h3>Selected File:</h3>
-              <p>{selectedFile.name}</p>
-              <img
-                src={URL.createObjectURL(selectedFile)}
-                alt="Prescription Preview"
-                style={{
-                  width: "100%",
-                  borderRadius: "8px",
-                  boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
-                }}
-              />
+          {/* Preview Captured/Selected Image */}
+          {(capturedImage || selectedFile) && (
+            <div style={{ marginTop: "20px", textAlign: "center" }}>
+              <h3>Prescription Image:</h3>
+              {capturedImage ? (
+                <img
+                  src={capturedImage}
+                  alt="Captured Prescription"
+                  style={{
+                    width: "100%",
+                    borderRadius: "8px",
+                    boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
+                  }}
+                />
+              ) : (
+                <img
+                  src={URL.createObjectURL(selectedFile)}
+                  alt="Selected Prescription"
+                  style={{
+                    width: "100%",
+                    borderRadius: "8px",
+                    boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
+                  }}
+                />
+              )}
+              
+              <div style={{ marginTop: "15px", display: "flex", justifyContent: "center", gap: "10px" }}>
+                {capturedImage && (
+                  <button
+                    onClick={retake}
+                    style={{
+                      padding: "10px 20px",
+                      backgroundColor: "#ffc107",
+                      color: "black",
+                      border: "none",
+                      borderRadius: "4px",
+                      cursor: "pointer",
+                    }}
+                  >
+                    Retake Photo
+                  </button>
+                )}
+                <button
+                  onClick={handleSubmit}
+                  style={{
+                    padding: "10px 20px",
+                    backgroundColor: "#28a745",
+                    color: "white",
+                    border: "none",
+                    borderRadius: "4px",
+                    cursor: "pointer",
+                  }}
+                >
+                  Submit Prescription
+                </button>
+                <button
+                  onClick={() => {
+                    setSelectedFile(null);
+                    setCapturedImage(null);
+                    setShowCamera(false);
+                  }}
+                  style={{
+                    padding: "10px 20px",
+                    backgroundColor: "#dc3545",
+                    color: "white",
+                    border: "none",
+                    borderRadius: "4px",
+                    cursor: "pointer",
+                  }}
+                >
+                  Cancel
+                </button>
+              </div>
             </div>
           )}
         </div>
