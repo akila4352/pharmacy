@@ -7,6 +7,7 @@
     "@shadcn/ui": "^0.0.4",
     "axios": "^1.7.9",
     "cra-template": "1.2.0",
+    "framer-motion": "^12.9.2",
     "leaflet": "^1.9.4",
     "leaflet-routing-machine": "^3.2.12",
     "lucide-react": "^0.471.1",
@@ -15,6 +16,7 @@
     "react-leaflet": "^5.0.0",
     "react-router-dom": "^7.1.2",
     "react-scripts": "5.0.1",
+    "styled-components": "^6.1.17",
     "web-vitals": "^4.2.4"
   },
   "scripts": {
