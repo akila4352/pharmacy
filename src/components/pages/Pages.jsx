@@ -12,12 +12,14 @@ import Register from "../home/Register/Register";
 import Header from "../common/header/Header";
 import PrescriptionScanner from "../home/Prescription/PrescriptionScanner";
 import PharmacyInterface from "../home/PharmacyInterface/PharmacyInterface";
+import PharmacyDashboard from "../Admin/PharmacyDashboard";
 const Pages = () => {
   return (
     <>
       <Router>
         <Routes>
           <Route path="/" element={<Home />} />
+          <Route path="/PharmacyDashboard" element={<PharmacyDashboard />} />
           <Route path="/add-pharmacy" element={<AddPharmacy />} />
           <Route path="/manage-medicine" element={<ManageMedicine />} />
           <Route path="/manage-Pharmacy-medicines" element={<ManagePharmacyMedicines />} />
