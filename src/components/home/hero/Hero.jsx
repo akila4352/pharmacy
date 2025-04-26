@@ -5,14 +5,13 @@ import "leaflet/dist/leaflet.css";
 import "leaflet-routing-machine";
 import Header from "../../common/header/Header";
 import "./hero.css";
+import iconUrl from "leaflet/dist/images/marker-icon.png";
+import iconShadowUrl from "leaflet/dist/images/marker-shadow.png";
 
 // API base URL
 const API_URL = process.env.REACT_APP_API_URL || "http://localhost:5000";
 
 // Fix default Leaflet marker icons
-import iconUrl from "leaflet/dist/images/marker-icon.png";
-import iconShadowUrl from "leaflet/dist/images/marker-shadow.png";
-
 const DefaultIcon = L.icon({
   iconUrl,
   shadowUrl: iconShadowUrl,
