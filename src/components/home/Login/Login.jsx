@@ -272,7 +272,7 @@ function Login() {
             navigate("/add-pharmacy");
             break;
           case 'admin':
-            navigate("PharmacyDashboard");
+            navigate("/PharmacyDashboard");
             break;
           default:
             navigate("/hero"); // Default route for unknown roles

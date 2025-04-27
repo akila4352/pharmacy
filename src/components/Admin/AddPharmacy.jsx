@@ -1,115 +1,46 @@
-import React, { useState, useCallback } from "react";
-import { MapContainer, TileLayer, Marker, useMapEvents } from "react-leaflet";
-import "leaflet/dist/leaflet.css";
-import { Icon } from "leaflet";
-import Heading from "../common/Heading";
+import React, { useState } from "react";
+import * as XLSX from "xlsx";
 import Headerpowner from "../common/header/Headerpowner";
-
-// Fix for default marker icons not showing in Leaflet with React
-import markerIcon from "leaflet/dist/images/marker-icon.png";
-import markerShadow from "leaflet/dist/images/marker-shadow.png";
-
-// Create custom icon to replace the default one
-const defaultIcon = new Icon({
-  iconUrl: markerIcon,
-  shadowUrl: markerShadow,
-  iconSize: [25, 41],
-  iconAnchor: [12, 41],
-  popupAnchor: [1, -34],
-  shadowSize: [41, 41]
-});
+import Heading from "../common/Heading";
 
 const API_URL = process.env.REACT_APP_API_URL || "http://localhost:5000";
 
-// MapClickHandler component to handle map click events
-function MapClickHandler({ setClickedPosition }) {
-  useMapEvents({
-    click: (e) => {
-      const { lat, lng } = e.latlng;
-      setClickedPosition({ lat, lng });
-    }
-  });
-  return null;
-}
-
-const AddPharmacy = () => {
+const UpdateStock = () => {
   const [message, setMessage] = useState("");
   const [messageType, setMessageType] = useState("");
   const [showPopup, setShowPopup] = useState(false);
-  const [formData, setFormData] = useState({
-    name: "",
-    address: "",
-    isAvailable: true,
-    price: "",
+  const [singleStock, setSingleStock] = useState({
     medicineName: "",
-    latitude: "",
-    longitude: "",
+    price: "",
+    isAvailable: true,
   });
+  const [bulkStock, setBulkStock] = useState([]);
 
-  // Map settings
-  const mapContainerStyle = { width: "100%", height: "400px" };
-  const defaultCenter = [6.08249715365853, 80.29727865317939]; // Note: Leaflet uses [lat, lng] format
-
-  const handlePositionChange = useCallback((position) => {
-    setFormData((fd) => ({
-      ...fd,
-      latitude: position.lat,
-      longitude: position.lng,
-    }));
-  }, []);
-
-  const handleChange = (e) => {
+  const handleSingleChange = (e) => {
     const { name, value } = e.target;
-    setFormData((fd) => ({ ...fd, [name]: value }));
+    setSingleStock((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleSubmit = async (e) => {
+  const handleSingleSubmit = async (e) => {
     e.preventDefault();
     try {
-      // Validate form data
-      if (!formData.latitude || !formData.longitude) {
-        setMessage("Please select a location on the map");
-        setMessageType("error");
-        setShowPopup(true);
-        setTimeout(() => setShowPopup(false), 3000);
-        return;
-      }
-
-      const body = {
-        name: formData.name,
-        address: formData.address,
-        medicineName: formData.medicineName,
-        price: parseFloat(formData.price),
-        isAvailable: formData.isAvailable === "true" || formData.isAvailable === true,
-        location: {
-          type: 'Point',
-          coordinates: [parseFloat(formData.longitude), parseFloat(formData.latitude)],
+      const res = await fetch(`${API_URL}/api/pharmacies/update-stock`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
         },
-      };
-      
-      const res = await fetch(`${API_URL}/api/pharmacies`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
+        body: JSON.stringify(singleStock),
       });
-      
+
       if (!res.ok) {
         const errorData = await res.json();
-        throw new Error(errorData.error || 'Failed to add pharmacy');
+        throw new Error(errorData.message || "Failed to update stock");
       }
-      
-      const data = await res.json();
-      setMessage("Pharmacy added successfully!");
+
+      setMessage("Stock updated successfully!");
       setMessageType("success");
-      setFormData({ 
-        name: "", 
-        address: "", 
-        isAvailable: true, 
-        price: "", 
-        medicineName: "", 
-        latitude: "", 
-        longitude: "" 
-      });
+      setSingleStock({ medicineName: "", price: "", isAvailable: true });
     } catch (err) {
       setMessage(`Error: ${err.message}`);
       setMessageType("error");
@@ -118,43 +49,84 @@ const AddPharmacy = () => {
     setTimeout(() => setShowPopup(false), 3000);
   };
 
+  const handleBulkUpload = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const data = new Uint8Array(event.target.result);
+        const workbook = XLSX.read(data, { type: "array" });
+        const sheetName = workbook.SheetNames[0];
+        const sheet = workbook.Sheets[sheetName];
+        const jsonData = XLSX.utils.sheet_to_json(sheet);
+        setBulkStock(jsonData);
+      } catch (error) {
+        setMessage("Error reading the file. Please ensure it is a valid Excel file.");
+        setMessageType("error");
+        setShowPopup(true);
+        setTimeout(() => setShowPopup(false), 3000);
+      }
+    };
+    reader.readAsArrayBuffer(file);
+  };
+
+  const handleBulkSubmit = async () => {
+    try {
+      const res = await fetch(`${API_URL}/api/pharmacies/update-stock-bulk`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+        body: JSON.stringify({ stock: bulkStock }),
+      });
+
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.message || "Failed to update stock in bulk");
+      }
+
+      setMessage("Bulk stock updated successfully!");
+      setMessageType("success");
+      setBulkStock([]);
+    } catch (err) {
+      setMessage(`Error: ${err.message}`);
+      setMessageType("error");
+    }
+    setShowPopup(true);
+    setTimeout(() => setShowPopup(false), 3000);
+  };
+
+  const handleDownloadTemplate = () => {
+    const templateData = [
+      { medicineName: "Paracetamol", price: 10.5, isAvailable: true },
+      { medicineName: "Ibuprofen", price: 15.0, isAvailable: false },
+    ];
+    const worksheet = XLSX.utils.json_to_sheet(templateData);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Template");
+    XLSX.writeFile(workbook, "bulk_stock_template.xlsx");
+  };
+
   return (
     <div>
       <Headerpowner />
       <section className="hero">
         <div className="container">
-          <Heading title="Add Pharmacy" />
-          <form className="flex" onSubmit={handleSubmit}>
-            <div className="box">
-              <span>Pharmacy Name</span>
-              <input
-                type="text"
-                name="name"
-                placeholder="Enter pharmacy name"
-                value={formData.name}
-                onChange={handleChange}
-                required
-              />
-            </div>
-            <div className="box">
-              <span>Address</span>
-              <input
-                type="text"
-                name="address"
-                placeholder="Enter pharmacy address"
-                value={formData.address}
-                onChange={handleChange}
-                required
-              />
-            </div>
+          <Heading title="Update Stock" />
+
+          {/* Single Stock Update */}
+          <form className="flex" onSubmit={handleSingleSubmit}>
             <div className="box">
               <span>Medicine Name</span>
               <input
                 type="text"
                 name="medicineName"
                 placeholder="Enter medicine name"
-                value={formData.medicineName}
-                onChange={handleChange}
+                value={singleStock.medicineName}
+                onChange={handleSingleChange}
                 required
               />
             </div>
@@ -164,85 +136,55 @@ const AddPharmacy = () => {
                 type="number"
                 name="price"
                 placeholder="Enter price"
-                value={formData.price}
-                onChange={handleChange}
+                value={singleStock.price}
+                onChange={handleSingleChange}
                 required
                 step="0.01"
               />
             </div>
             <div className="box">
               <span>Availability</span>
-              <select 
-                name="isAvailable" 
-                value={formData.isAvailable} 
-                onChange={handleChange}
+              <select
+                name="isAvailable"
+                value={singleStock.isAvailable}
+                onChange={handleSingleChange}
               >
                 <option value={true}>Available</option>
                 <option value={false}>Not Available</option>
               </select>
             </div>
-            <div className="box">
-              <span>Latitude</span>
-              <input
-                type="text"
-                name="latitude"
-                placeholder="Click on map to set"
-                value={formData.latitude}
-                onChange={handleChange}
-                readOnly
-              />
-            </div>
-            <div className="box">
-              <span>Longitude</span>
-              <input
-                type="text"
-                name="longitude"
-                placeholder="Click on map to set"
-                value={formData.longitude}
-                onChange={handleChange}
-                readOnly
-              />
-            </div>
-            <button className="btn1" type="submit">Add Pharmacy</button>
+            <button className="btn1" type="submit">
+              Update Stock
+            </button>
           </form>
-          
+
+          {/* Bulk Stock Update */}
+          <div className="bulk-upload">
+            <h3>Bulk Update</h3>
+            <button className="btn1" onClick={handleDownloadTemplate}>
+              Download Template
+            </button>
+            <input
+              type="file"
+              accept=".xlsx, .xls"
+              onChange={handleBulkUpload}
+            />
+            {bulkStock.length > 0 && (
+              <button className="btn1" onClick={handleBulkSubmit}>
+                Submit Bulk Stock
+              </button>
+            )}
+          </div>
+
           {showPopup && (
             <div className={`popup ${messageType}`}>
               <p>{message}</p>
             </div>
           )}
-
-          <div style={mapContainerStyle}>
-            <MapContainer
-              center={defaultCenter}
-              zoom={10}
-              style={{ height: "100%", width: "100%" }}
-            >
-              <TileLayer
-                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-              />
-              <MapClickHandler setClickedPosition={handlePositionChange} />
-              {formData.latitude && formData.longitude && (
-                <Marker
-                  position={[formData.latitude, formData.longitude]}
-                  icon={defaultIcon}
-                  draggable={true}
-                  eventHandlers={{
-                    dragend: (e) => {
-                      const marker = e.target;
-                      const position = marker.getLatLng();
-                      handlePositionChange(position);
-                    },
-                  }}
-                />
-              )}
-            </MapContainer>
-          </div>
         </div>
       </section>
     </div>
   );
 };
 
-export default AddPharmacy;
+export default UpdateStock;

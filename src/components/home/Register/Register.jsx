@@ -1,10 +1,23 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import styled from "styled-components";
 import { motion } from "framer-motion";
+import { MapContainer, TileLayer, Marker, useMapEvents } from "react-leaflet";
+import "leaflet/dist/leaflet.css";
+import { Icon } from "leaflet";
 import bg from '../Login/bg.svg';
 import nearForm from '../Login/nearForm.svg';
 import sittingHuman from '../Login/sittingHuman.svg';
+import markerIcon from 'leaflet/dist/images/marker-icon.png';
+import markerShadow from 'leaflet/dist/images/marker-shadow.png';
+
+// Fix Leaflet default icon issue
+const defaultIcon = new Icon({
+  iconUrl: markerIcon,
+  shadowUrl: markerShadow,
+  iconSize: [25, 41],
+  iconAnchor: [12, 41]
+});
 
 // Styled components
 const RootContainer = styled.div`
@@ -47,7 +60,7 @@ const SittingImgContainer = styled.div`
 `;
 
 const BoxContainer = styled.div`
-  width: 280px;
+  width: 340px;
   min-height: 550px;
   display: flex;
   flex-direction: column;
@@ -233,6 +246,22 @@ const ErrorMessage = styled.div`
   text-align: center;
 `;
 
+const MapBox = styled.div`
+  width: 100%;
+  height: 200px;
+  margin-top: 10px;
+  margin-bottom: 10px;
+  border: 1px solid rgba(200, 200, 200, 0.4);
+  border-radius: 5px;
+  overflow: hidden;
+`;
+
+const LocationInfoText = styled.p`
+  font-size: 12px;
+  color: rgba(100, 100, 100, 1);
+  margin: 5px 0;
+`;
+
 const Marginer = ({ direction = "horizontal", margin }) => {
   const HorizontalMargin = styled.span`
     display: flex;
@@ -251,6 +280,20 @@ const Marginer = ({ direction = "horizontal", margin }) => {
   );
 };
 
+// Map click handler component
+function LocationMarker({ position, setPosition }) {
+  const map = useMapEvents({
+    click(e) {
+      setPosition(e.latlng);
+      map.flyTo(e.latlng, map.getZoom());
+    }
+  });
+
+  return position === null ? null : (
+    <Marker position={position} icon={defaultIcon} />
+  );
+}
+
 function Register() {
   const navigate = useNavigate();
   const [formData, setFormData] = useState({
@@ -261,71 +304,96 @@ function Register() {
     password: "",
     role: "patient",
     adminCode: "",
-    // Pharmacy specific fields
     pharmacyName: "",
     address: "",
-    medicineName: "",
-    price: "",
     latitude: "",
     longitude: "",
-    isAvailable: true
+    isAvailable: true,
+    medicineName: "",
+    price: "",
   });
   const [error, setError] = useState("");
+  const [position, setPosition] = useState(null);
+  const [mapCenter, setMapCenter] = useState([20, 0]); // Default world center
+
+  // Get user's current location when component mounts
+  useEffect(() => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const { latitude, longitude } = position.coords;
+          setMapCenter([latitude, longitude]);
+        },
+        (error) => {
+          console.error("Error getting user location:", error);
+        }
+      );
+    }
+  }, []);
+
+  // Update form data when position changes
+  useEffect(() => {
+    if (position) {
+      setFormData((prev) => ({
+        ...prev,
+        latitude: position.lat.toString(),
+        longitude: position.lng.toString(),
+      }));
+    }
+  }, [position]);
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      [name]: type === 'checkbox' ? checked : value
+      [name]: type === "checkbox" ? checked : value,
     }));
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
-    // Validate admin code
+
     if (formData.role === 'admin' && formData.adminCode !== '1234') {
-      setError("Invalid admin code");
-      return;
+        setError("Invalid admin code");
+        return;
     }
 
-    // Validate pharmacy fields
     if (formData.role === 'pharmacy') {
-      const requiredFields = ['pharmacyName', 'address', 'medicineName', 'price', 'latitude', 'longitude'];
-      const missingFields = requiredFields.filter(field => !formData[field]);
-      
-      if (missingFields.length > 0) {
-        setError(`Please fill in all required pharmacy fields: ${missingFields.join(', ')}`);
-        return;
-      }
+        const requiredFields = ['pharmacyName', 'address', 'medicineName', 'price', 'latitude', 'longitude'];
+        const missingFields = requiredFields.filter(field => !formData[field]);
+
+        if (missingFields.length > 0) {
+            setError(`Please fill in all required pharmacy fields: ${missingFields.join(', ')}`);
+            return;
+        }
     }
 
     try {
-      const response = await fetch("http://localhost:5000/api/auth/register", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(formData),
-      });
-  
-      const data = await response.json();
-  
-      if (response.ok) {
-        alert("Registration successful! Please login.");
-        navigate("/login");
-      } else {
-        setError(data.message);
-      }
+        const response = await fetch("http://localhost:5000/api/auth/register", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify(formData),
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+            alert("Registration successful! Please login.");
+            navigate("/login");
+        } else {
+            setError(data.message);
+        }
     } catch (err) {
-      setError("An error occurred during registration");
+        setError("An error occurred during registration");
     }
-  };
+};
 
   return (
     <RootContainer>
       <BgImgContainer>
-        <img src={bg} alt="Background" style={{ width: '100%' }} />
+        <img src={bg} alt="Background" style={{ width: "100%" }} />
       </BgImgContainer>
       <NearFormImgContainer>
         <img src={nearForm} alt="Human 1" width="200px" />
@@ -341,7 +409,7 @@ function Register() {
                 height: "550px",
                 borderRadius: "50%",
                 transform: "rotate(60deg)",
-              }
+              },
             }}
           />
           <HeaderContainer>
@@ -402,8 +470,8 @@ function Register() {
               <option value="pharmacy">Pharmacy Owner</option>
               <option value="admin">Admin</option>
             </Select>
-            
-            {formData.role === 'admin' && (
+
+            {formData.role === "admin" && (
               <Input
                 type="password"
                 placeholder="Admin Secret Code"
@@ -413,8 +481,8 @@ function Register() {
                 required
               />
             )}
-            
-            {formData.role === 'pharmacy' && (
+
+            {formData.role === "pharmacy" && (
               <>
                 <Input
                   type="text"
@@ -447,36 +515,59 @@ function Register() {
                   value={formData.price}
                   onChange={handleChange}
                   required
+                  step="0.01"
                 />
-                <Input
-                  type="text"
-                  placeholder="Latitude"
-                  name="latitude"
-                  value={formData.latitude}
-                  onChange={handleChange}
-                  required
-                />
-                <Input
-                  type="text"
-                  placeholder="Longitude"
-                  name="longitude"
-                  value={formData.longitude}
-                  onChange={handleChange}
-                  required
-                />
-                <div style={{ display: 'flex', alignItems: 'center', marginTop: '10px' }}>
-                  <input
-                    type="checkbox"
-                    id="isAvailable"
-                    name="isAvailable"
-                    checked={formData.isAvailable}
+                <LocationInfoText>
+                  Click on the map to set your pharmacy location:
+                </LocationInfoText>
+                <MapBox>
+                  <MapContainer
+                    center={mapCenter}
+                    zoom={13}
+                    scrollWheelZoom={true}
+                    style={{ height: "100%", width: "100%" }}
+                  >
+                    <TileLayer
+                      attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                      url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                    />
+                    <LocationMarker
+                      position={position}
+                      setPosition={setPosition}
+                    />
+                  </MapContainer>
+                </MapBox>
+                <div style={{ display: "flex", justifyContent: "space-between" }}>
+                  <Input
+                    type="text"
+                    placeholder="Latitude"
+                    name="latitude"
+                    value={formData.latitude}
                     onChange={handleChange}
-                    style={{ marginRight: '10px', width: 'auto', height: 'auto' }}
+                    required
+                    style={{ width: "48%" }}
+                    readOnly
                   />
-                  <label htmlFor="isAvailable" style={{ fontSize: '12px', color: 'rgba(100, 100, 100, 1)' }}>
-                    Medicine Available
-                  </label>
+                  <Input
+                    type="text"
+                    placeholder="Longitude"
+                    name="longitude"
+                    value={formData.longitude}
+                    onChange={handleChange}
+                    required
+                    style={{ width: "48%" }}
+                    readOnly
+                  />
                 </div>
+                <Select
+                  name="isAvailable"
+                  value={formData.isAvailable}
+                  onChange={handleChange}
+                  required
+                >
+                  <option value={true}>Available</option>
+                  <option value={false}>Not Available</option>
+                </Select>
               </>
             )}
           </FormContainer>
@@ -487,11 +578,9 @@ function Register() {
             Sign Up
           </SubmitButton>
           <Marginer direction="vertical" margin="1em" />
-          <MutedLink style={{ alignSelf: 'center' }}>
+          <MutedLink style={{ alignSelf: "center" }}>
             Already have an account?{" "}
-            <BoldLink to="/login">
-              Sign In
-            </BoldLink>
+            <BoldLink to="/login">Sign In</BoldLink>
           </MutedLink>
         </InnerContainer>
       </BoxContainer>

@@ -1,61 +1,99 @@
-// src/components/ModernPharmacyDashboard.jsx
 import React, { useState, useEffect } from "react";
-import {
-  MapContainer,
-  TileLayer,
-  Marker,
-  useMapEvents,
-} from "react-leaflet";
+import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 
-// Import components from your existing structure
 import HeaderAdmin from "../common/header/HeaderAdmin";
 
 const API_URL = process.env.REACT_APP_API_URL || "http://localhost:5000";
 
-const customMarkerIcon = new L.Icon({
+// Define pharmacy marker icon
+const pharmacyMarkerIcon = new L.Icon({
   iconUrl: "https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon.png",
   iconSize: [25, 41],
   iconAnchor: [12, 41],
+  popupAnchor: [1, -34],
 });
-
-// Location marker component for map
-const LocationMarker = ({ setSelectedLocation }) => {
-  useMapEvents({
-    click(e) {
-      setSelectedLocation(e.latlng);
-    },
-  });
-  return null;
-};
 
 const PharmacyDashboard = () => {
   const [message, setMessage] = useState("");
   const [messageType, setMessageType] = useState("success");
   const [showNotification, setShowNotification] = useState(false);
-  const [selectedLocation, setSelectedLocation] = useState(null);
-  const [searchQuery, setSearchQuery] = useState("");
   const [pharmacies, setPharmacies] = useState([]);
+  const [users, setUsers] = useState([]);
+  const [pharmacyOwners, setPharmacyOwners] = useState([]);
   const [editId, setEditId] = useState(null);
   const [editData, setEditData] = useState({});
   const [showEditModal, setShowEditModal] = useState(false);
+  const [activeTab, setActiveTab] = useState("dashboard");
+  const [selectedPharmacy, setSelectedPharmacy] = useState(null);
+  const [showPharmacyDetails, setShowPharmacyDetails] = useState(false);
+  const [selectedUser, setSelectedUser] = useState(null);
+  const [showUserDetails, setShowUserDetails] = useState(false);
   const [stats, setStats] = useState({
     totalPharmacies: 0,
     totalMedicines: 0,
     availableMedicines: 0,
+    totalUsers: 0,
+    totalOwners: 0,
   });
+  const [selectedPharmacyGroup, setSelectedPharmacyGroup] = useState(null);
+  const [showStockDetails, setShowStockDetails] = useState(false);
+  const [editStock, setEditStock] = useState(null); // Track the medicine being edited
+  const [mapLocation, setMapLocation] = useState(null); // Track location for the map modal
 
   const defaultCenter = { lat: 6.0825, lng: 80.2973 };
 
   useEffect(() => {
-    // Update statistics whenever pharmacies change
+    // Fetch all data when component mounts
+    fetchUsers();
+    fetchPharmacyOwners();
+    fetchAllPharmacies();
+  }, []);
+
+  useEffect(() => {
+    // Update statistics whenever data changes
     setStats({
       totalPharmacies: pharmacies.length,
       totalMedicines: new Set(pharmacies.map(p => p.medicineName)).size,
       availableMedicines: pharmacies.filter(p => p.isAvailable).length,
+      totalUsers: users.length,
+      totalOwners: pharmacyOwners.length,
     });
-  }, [pharmacies]);
+  }, [pharmacies, users, pharmacyOwners]);
+
+  const fetchAllPharmacies = async () => {
+    try {
+      const res = await fetch(`${API_URL}/api/pharmacies`);
+      if (!res.ok) throw new Error(await res.text());
+      const data = await res.json();
+      setPharmacies(data);
+    } catch (err) {
+      showMessage(`Error fetching pharmacies: ${err.message}`, "error");
+    }
+  };
+
+  const fetchUsers = async () => {
+    try {
+      const res = await fetch(`${API_URL}/api/users`);
+      if (!res.ok) throw new Error(await res.text());
+      const data = await res.json();
+      setUsers(data);
+    } catch (err) {
+      showMessage(`Error fetching users: ${err.message}`, "error");
+    }
+  };
+
+  const fetchPharmacyOwners = async () => {
+    try {
+      const res = await fetch(`${API_URL}/api/users/pharmacy-owners`);
+      if (!res.ok) throw new Error(await res.text());
+      const data = await res.json();
+      setPharmacyOwners(data);
+    } catch (err) {
+      showMessage(`Error fetching pharmacy owners: ${err.message}`, "error");
+    }
+  };
 
   const showMessage = (msg, type) => {
     setMessage(msg);
@@ -64,36 +102,17 @@ const PharmacyDashboard = () => {
     setTimeout(() => setShowNotification(false), 3000);
   };
 
-  const handleSearch = async (e) => {
-    e.preventDefault();
-    if (!selectedLocation) {
-      showMessage("Please select a location on the map.", "error");
-      return;
-    }
-    try {
-      const res = await fetch(
-        `${API_URL}/api/pharmacies/search?latitude=${selectedLocation.lat}&longitude=${selectedLocation.lng}&medicineName=${encodeURIComponent(searchQuery)}`
-      );
-      if (!res.ok) throw new Error(await res.text());
-      const data = await res.json();
-      setPharmacies(data);
-      if (data.length === 0) showMessage("No pharmacies found.", "info");
-      else showMessage(`Found ${data.length} pharmacies`, "success");
-    } catch (err) {
-      showMessage(`Error: ${err.message}`, "error");
-    }
-  };
-
   const handleEditClick = (ph) => {
     setEditId(ph._id);
     setEditData({
       name: ph.name,
       address: ph.address,
       medicineName: ph.medicineName,
-      price: ph.price,
+      price: ph.price || 0,
       isAvailable: String(ph.isAvailable),
-      latitude: ph.location.coordinates[1],
-      longitude: ph.location.coordinates[0],
+      latitude: ph.location?.coordinates?.[1] || 0,
+      longitude: ph.location?.coordinates?.[0] || 0,
+      ownerId: ph.ownerId || "",
     });
     setShowEditModal(true);
   };
@@ -109,23 +128,28 @@ const PharmacyDashboard = () => {
         name: editData.name,
         address: editData.address,
         medicineName: editData.medicineName,
-        price: parseFloat(editData.price),
+        price: parseFloat(editData.price || 0),
         isAvailable: editData.isAvailable === "true",
+        ownerId: editData.ownerId,
         location: {
           type: "Point",
-          coordinates: [parseFloat(editData.longitude), parseFloat(editData.latitude)],
+          coordinates: [parseFloat(editData.longitude || 0), parseFloat(editData.latitude || 0)],
         },
       };
+      
       const res = await fetch(`${API_URL}/api/pharmacies/${editId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
       });
+      
       if (!res.ok) throw new Error(await res.text());
       const updated = await res.json();
+      
       setPharmacies((prev) =>
         prev.map((p) => (p._id === editId ? updated : p))
       );
+      
       showMessage("Pharmacy updated successfully.", "success");
       setEditId(null);
       setShowEditModal(false);
@@ -135,13 +159,15 @@ const PharmacyDashboard = () => {
   };
 
   const handleDelete = async (id) => {
-    if (!confirm("Are you sure you want to delete this pharmacy?")) return;
+    if (!window.confirm("Are you sure you want to delete this pharmacy?")) return;
     
     try {
       const res = await fetch(`${API_URL}/api/pharmacies/${id}`, {
         method: "DELETE",
       });
+      
       if (!res.ok) throw new Error(await res.text());
+      
       setPharmacies((prev) => prev.filter((p) => p._id !== id));
       showMessage("Pharmacy deleted successfully.", "success");
     } catch (err) {
@@ -149,11 +175,153 @@ const PharmacyDashboard = () => {
     }
   };
 
+  const handleUserDelete = async (id) => {
+    if (!window.confirm("Are you sure you want to delete this user?")) return;
+    
+    try {
+      const res = await fetch(`${API_URL}/api/users/${id}`, {
+        method: "DELETE",
+      });
+      
+      if (!res.ok) throw new Error(await res.text());
+      
+      setUsers((prev) => prev.filter((u) => u._id !== id));
+      showMessage("User deleted successfully.", "success");
+    } catch (err) {
+      showMessage(`Error: ${err.message}`, "error");
+    }
+  };
+
+  const handleUserStatusChange = async (userId, isActive) => {
+    try {
+      const res = await fetch(`${API_URL}/api/users/${userId}/status`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ isActive }),
+      });
+      
+      if (!res.ok) throw new Error(await res.text());
+      
+      // Update local state to reflect the change
+      setUsers(prev => 
+        prev.map(user => user._id === userId ? {...user, isActive} : user)
+      );
+      
+      showMessage(`User ${isActive ? 'activated' : 'deactivated'} successfully.`, "success");
+    } catch (err) {
+      showMessage(`Error: ${err.message}`, "error");
+    }
+  };
+
+  const handleViewPharmacyDetails = (pharmacy) => {
+    setSelectedPharmacy(pharmacy);
+    setShowPharmacyDetails(true);
+  };
+
+  const handleViewUserDetails = (user) => {
+    setSelectedUser(user);
+    setShowUserDetails(true);
+  };
+
+  const handleViewPharmacyGroup = (ownerId) => {
+    const filteredPharmacies = pharmacies.filter((ph) => ph.ownerId?._id === ownerId);
+    setSelectedPharmacyGroup(filteredPharmacies);
+    setActiveTab("pharmacyGroup");
+  };
+
+  const handleBackToOwners = () => {
+    setSelectedPharmacyGroup(null);
+    setActiveTab("owners");
+  };
+
+  const handleViewDetails = (pharmacy) => {
+    setSelectedPharmacy(pharmacy);
+    setShowStockDetails(true);
+  };
+
+  const handleCloseDetails = () => {
+    setSelectedPharmacy(null);
+    setShowStockDetails(false);
+  };
+
+  const handleShowStock = (pharmacy) => {
+    setSelectedPharmacy(pharmacy);
+    setShowStockDetails(true);
+  };
+
+  const handleEditStock = (medicine) => {
+    setEditStock({ ...medicine });
+  };
+
+  const handleStockChange = (e) => {
+    const { name, value } = e.target;
+    setEditStock((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleUpdateStock = async () => {
+    try {
+      const updatedStock = selectedPharmacy.stock.map((item) =>
+        item.medicineName === editStock.medicineName ? editStock : item
+      );
+
+      const res = await fetch(`${API_URL}/api/pharmacies/${selectedPharmacy._id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ stock: updatedStock }),
+      });
+
+      if (!res.ok) throw new Error(await res.text());
+
+      setSelectedPharmacy((prev) => ({ ...prev, stock: updatedStock }));
+      setEditStock(null);
+      showMessage("Stock updated successfully.", "success");
+    } catch (err) {
+      showMessage(`Error: ${err.message}`, "error");
+    }
+  };
+
+  const handleDeleteStock = async (medicineName) => {
+    try {
+      const updatedStock = selectedPharmacy.stock.filter(
+        (item) => item.medicineName !== medicineName
+      );
+
+      const res = await fetch(`${API_URL}/api/pharmacies/${selectedPharmacy._id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ stock: updatedStock }),
+      });
+
+      if (!res.ok) throw new Error(await res.text());
+
+      setSelectedPharmacy((prev) => ({ ...prev, stock: updatedStock }));
+      showMessage("Medicine deleted successfully.", "success");
+    } catch (err) {
+      showMessage(`Error: ${err.message}`, "error");
+    }
+  };
+
+  const handleLocatePharmacy = (pharmacy) => {
+    if (pharmacy.location?.coordinates?.length === 2) {
+      setMapLocation({
+        name: pharmacy.name,
+        coordinates: pharmacy.location.coordinates,
+      });
+    } else {
+      showMessage("Location data is not available for this pharmacy.", "error");
+    }
+  };
+
+  // Safe formatter function
+  const formatPrice = (price) => {
+    return (price !== undefined && price !== null) ? Number(price).toFixed(2) : '0.00';
+  };
+
   return (
     <div>
       <HeaderAdmin />
       <div className="dashboard-container">
-        <h2 className="dashboard-title">Pharmacy Medicine Management</h2>
+        <h2 className="dashboard-title">Admin Dashboard</h2>
 
         {/* Stats Cards */}
         <div className="stats-container">
@@ -172,106 +340,172 @@ const PharmacyDashboard = () => {
             <div className="stat-value">{stats.availableMedicines}</div>
             <div className="stat-label">Available Medicines</div>
           </div>
-        </div>
-
-        <div className="dashboard-card">
-          <div className="card-header">
-            <h3>Search for Medicines</h3>
+          <div className="stat-card">
+            <div className="stat-icon">👥</div>
+            <div className="stat-value">{stats.totalUsers}</div>
+            <div className="stat-label">Total Users</div>
           </div>
-          <div className="card-body">
-            <form className="search-form" onSubmit={handleSearch}>
-              <div className="form-group">
-                <label htmlFor="medicine-search">Medicine Name</label>
-                <input
-                  id="medicine-search"
-                  type="text"
-                  placeholder="Enter medicine name"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  required
-                />
-              </div>
-              <button type="submit" className="search-button">
-                <span className="search-icon">🔍</span> Search
-              </button>
-            </form>
-
-            <div className="map-container">
-              <MapContainer center={defaultCenter} zoom={13} style={{ height: "100%", width: "100%" }}>
-                <TileLayer
-                  url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                  attribution='&copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors'
-                />
-                <LocationMarker setSelectedLocation={setSelectedLocation} />
-                {selectedLocation && (
-                  <Marker position={selectedLocation} icon={customMarkerIcon} />
-                )}
-                {pharmacies.map((pharmacy) => (
-                  <Marker
-                    key={pharmacy._id}
-                    position={{
-                      lat: pharmacy.location.coordinates[1],
-                      lng: pharmacy.location.coordinates[0],
-                    }}
-                    icon={customMarkerIcon}
-                  />
-                ))}
-              </MapContainer>
-            </div>
-            
-            <div className="location-info">
-              {selectedLocation 
-                ? `Selected Location: ${selectedLocation.lat.toFixed(6)}, ${selectedLocation.lng.toFixed(6)}` 
-                : "Click on the map to select a location"}
-            </div>
+          <div className="stat-card">
+            <div className="stat-icon">🏪</div>
+            <div className="stat-value">{stats.totalOwners}</div>
+            <div className="stat-label">Pharmacy Owners</div>
           </div>
         </div>
 
-        {pharmacies.length > 0 && (
+        {/* Navigation Tabs */}
+        <div className="nav-tabs">
+          <button 
+            className={`tab-button ${activeTab === 'dashboard' ? 'active' : ''}`}
+            onClick={() => setActiveTab('dashboard')}
+          >
+            <span className="tab-icon">🗺️</span>
+            Pharmacy Map
+          </button>
+          <button 
+            className={`tab-button ${activeTab === 'users' ? 'active' : ''}`}
+            onClick={() => setActiveTab('users')}
+          >
+            <span className="tab-icon">👤</span>
+            Users
+          </button>
+          <button 
+            className={`tab-button ${activeTab === 'owners' ? 'active' : ''}`}
+            onClick={() => setActiveTab('owners')}
+          >
+            <span className="tab-icon">🏪</span>
+            Pharmacy Owners
+          </button>
+        </div>
+
+        {/* Pharmacy Map Tab */}
+        {activeTab === 'dashboard' && (
           <div className="dashboard-card">
             <div className="card-header">
-              <h3>Search Results ({pharmacies.length} pharmacies)</h3>
+              <h3>All Registered Pharmacies</h3>
+              <button 
+                className="refresh-button"
+                onClick={fetchAllPharmacies}
+              >
+                Refresh Data
+              </button>
+            </div>
+            <div className="card-body">
+              <div className="map-container">
+                <MapContainer center={defaultCenter} zoom={13} style={{ height: "100%", width: "100%" }}>
+                  <TileLayer
+                    url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                    attribution='&copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors'
+                  />
+                  {pharmacies.map((pharmacy) => (
+                    pharmacy?.location?.coordinates?.length === 2 && (
+                      <Marker
+                        key={pharmacy._id}
+                        position={{
+                          lat: pharmacy.location.coordinates[1],
+                          lng: pharmacy.location.coordinates[0],
+                        }}
+                        icon={pharmacyMarkerIcon}
+                      >
+                        <Popup>
+                          <div className="pharmacy-popup">
+                            <h4>{pharmacy.name}</h4>
+                            <p><strong>Medicine:</strong> {pharmacy.medicineName}</p>
+                            <p><strong>Price:</strong> ${formatPrice(pharmacy.price)}</p>
+                            <p><strong>Status:</strong> {pharmacy.isAvailable ? "Available" : "Not Available"}</p>
+                            <button 
+                              className="view-details-button"
+                              onClick={() => handleViewPharmacyDetails(pharmacy)}
+                            >
+                              View Details
+                            </button>
+                          </div>
+                        </Popup>
+                      </Marker>
+                    )
+                  ))}
+                </MapContainer>
+              </div>
+              
+              <div className="pharmacy-list">
+                <h4>Registered Pharmacies</h4>
+                <div className="pharmacy-list-container">
+                  {pharmacies.map(pharmacy => (
+                    <div 
+                      key={pharmacy._id} 
+                      className="pharmacy-list-item"
+                      onClick={() => handleViewPharmacyDetails(pharmacy)}
+                    >
+                      <div className="pharmacy-list-name">{pharmacy.name}</div>
+                      <div className="pharmacy-list-medicine">{pharmacy.medicineName}</div>
+                      <span className={pharmacy.isAvailable ? "status-available" : "status-unavailable"}>
+                        {pharmacy.isAvailable ? "Available" : "Not Available"}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Users Tab */}
+        {activeTab === 'users' && (
+          <div className="dashboard-card">
+            <div className="card-header">
+              <h3>Registered Users</h3>
+              <button 
+                className="refresh-button"
+                onClick={fetchUsers}
+              >
+                Refresh Users
+              </button>
             </div>
             <div className="card-body">
               <div className="table-responsive">
-                <table className="pharmacy-table">
+                <table className="user-table">
                   <thead>
                     <tr>
-                      <th>Actions</th>
+                      <th>ID</th>
                       <th>Name</th>
-                      <th>Address</th>
-                      <th>Medicine</th>
-                      <th>Price</th>
+                      <th>Email</th>
+                      <th>Phone</th>
+                      <th>Joined Date</th>
                       <th>Status</th>
+                      <th>Actions</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {pharmacies.map((pharmacy) => (
-                      <tr key={pharmacy._id}>
+                    {users.map((user) => (
+                      <tr key={user._id}>
+                        <td>{user._id.substring(0, 8)}...</td>
+                        <td>{user.name}</td>
+                        <td>{user.email}</td>
+                        <td>{user.phone || "N/A"}</td>
+                        <td>{new Date(user.createdAt).toLocaleDateString()}</td>
+                        <td>
+                          <span className={user.isActive ? "status-active" : "status-inactive"}>
+                            {user.isActive ? "Active" : "Inactive"}
+                          </span>
+                        </td>
                         <td className="action-buttons">
                           <button 
-                            className="edit-button" 
-                            onClick={() => handleEditClick(pharmacy)}
-                            aria-label="Edit"
+                            className={user.isActive ? "deactivate-button" : "activate-button"}
+                            onClick={() => handleUserStatusChange(user._id, !user.isActive)}
                           >
-                            ✏️
+                            {user.isActive ? "Deactivate" : "Activate"}
+                          </button>
+                          <button 
+                            className="view-details-button"
+                            onClick={() => handleViewUserDetails(user)}
+                          >
+                            Details
                           </button>
                           <button 
                             className="delete-button" 
-                            onClick={() => handleDelete(pharmacy._id)}
-                            aria-label="Delete"
+                            onClick={() => handleUserDelete(user._id)}
                           >
-                            🗑️
+                            Delete
                           </button>
-                        </td>
-                        <td>{pharmacy.name}</td>
-                        <td>{pharmacy.address}</td>
-                        <td>{pharmacy.medicineName}</td>
-                        <td>${pharmacy.price.toFixed(2)}</td>
-                        <td>
-                          <span className={pharmacy.isAvailable ? "status-available" : "status-unavailable"}>
-                            {pharmacy.isAvailable ? "Available" : "Not Available"}
-                          </span>
                         </td>
                       </tr>
                     ))}
@@ -282,7 +516,279 @@ const PharmacyDashboard = () => {
           </div>
         )}
 
-        {/* Edit Modal */}
+        {/* Pharmacy Owners Tab */}
+        {activeTab === "owners" && (
+          <div className="dashboard-card">
+            <div className="card-header">
+              <h3>Pharmacy Owners</h3>
+              <button className="refresh-button" onClick={fetchPharmacyOwners}>
+                Refresh Owners
+              </button>
+            </div>
+            <div className="card-body">
+              <div className="table-responsive">
+                <table className="owner-table">
+                  <thead>
+                    <tr>
+                      <th>ID</th>
+                      <th>Name</th>
+                      <th>Email</th>
+                      <th>Phone</th>
+                      <th>Pharmacy Count</th>
+                      <th>Status</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {pharmacyOwners.map((owner) => {
+                      const ownerPharmacies = pharmacies.filter(
+                        (p) => p.ownerId?._id === owner._id
+                      );
+                      return (
+                        <tr key={owner._id}>
+                          <td>{owner._id.substring(0, 8)}...</td>
+                          <td>{owner.name}</td>
+                          <td>{owner.email}</td>
+                          <td>{owner.phone || "N/A"}</td>
+                          <td>{ownerPharmacies.length}</td>
+                          <td>
+                            <span
+                              className={
+                                owner.isActive ? "status-active" : "status-inactive"
+                              }
+                            >
+                              {owner.isActive ? "Active" : "Inactive"}
+                            </span>
+                          </td>
+                          <td className="action-buttons">
+                            <button
+                              className="view-details-button"
+                              onClick={() => handleViewPharmacyGroup(owner._id)}
+                            >
+                              View Pharmacies
+                            </button>
+                            <button
+                              className="delete-button"
+                              onClick={() => handleUserDelete(owner._id)}
+                            >
+                              Delete
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Individual Pharmacy Group Tab */}
+        {activeTab === "pharmacyGroup" && selectedPharmacyGroup && (
+          <div className="dashboard-card">
+            <div className="card-header">
+              <h3>{selectedPharmacyGroup[0]?.ownerId?.name || "Pharmacy"}'s Pharmacies</h3>
+              <button className="back-button" onClick={handleBackToOwners}>
+                Back to Owners
+              </button>
+            </div>
+            <div className="card-body">
+              <div className="table-responsive">
+                <table className="pharmacy-table">
+                  <thead>
+                    <tr>
+                      <th>Name</th>
+                      <th>Address</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {selectedPharmacyGroup.map((pharmacy) => (
+                      <tr key={pharmacy._id}>
+                        <td>{pharmacy.name}</td>
+                        <td>{pharmacy.address}</td>
+                        <td className="action-buttons">
+                          <button
+                            className="view-details-button"
+                            onClick={() => handleShowStock(pharmacy)}
+                          >
+                            Show Stock
+                          </button>
+                          <button
+                            className="locate-button"
+                            onClick={() => handleLocatePharmacy(pharmacy)}
+                          >
+                            Locate
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Stock Details Modal */}
+        {showStockDetails && selectedPharmacy && (
+          <div className="modal-overlay">
+            <div className="modal-content">
+              <div className="modal-header">
+                <h3>Stock Details - {selectedPharmacy.name}</h3>
+                <button className="close-button" onClick={handleCloseDetails}>
+                  ×
+                </button>
+              </div>
+              <div className="modal-body">
+                {selectedPharmacy.stock.length > 0 ? (
+                  <table className="stock-table">
+                    <thead>
+                      <tr>
+                        <th>Medicine Name</th>
+                        <th>Price</th>
+                        <th>Available</th>
+                        <th>Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {selectedPharmacy.stock.map((item, index) => (
+                        <tr key={index}>
+                          <td>
+                            {editStock?.medicineName === item.medicineName ? (
+                              <input
+                                type="text"
+                                name="medicineName"
+                                value={editStock.medicineName}
+                                onChange={handleStockChange}
+                              />
+                            ) : (
+                              item.medicineName
+                            )}
+                          </td>
+                          <td>
+                            {editStock?.medicineName === item.medicineName ? (
+                              <input
+                                type="number"
+                                name="price"
+                                value={editStock.price}
+                                onChange={handleStockChange}
+                              />
+                            ) : (
+                              `$${item.price.toFixed(2)}`
+                            )}
+                          </td>
+                          <td>
+                            {editStock?.medicineName === item.medicineName ? (
+                              <select
+                                name="isAvailable"
+                                value={editStock.isAvailable}
+                                onChange={handleStockChange}
+                              >
+                                <option value={true}>Yes</option>
+                                <option value={false}>No</option>
+                              </select>
+                            ) : (
+                              item.isAvailable ? "Yes" : "No"
+                            )}
+                          </td>
+                          <td>
+                            {editStock?.medicineName === item.medicineName ? (
+                              <>
+                                <button
+                                  className="save-button"
+                                  onClick={handleUpdateStock}
+                                >
+                                  Save
+                                </button>
+                                <button
+                                  className="cancel-button"
+                                  onClick={() => setEditStock(null)}
+                                >
+                                  Cancel
+                                </button>
+                              </>
+                            ) : (
+                              <>
+                                <button
+                                  className="edit-button"
+                                  onClick={() => handleEditStock(item)}
+                                >
+                                  Edit
+                                </button>
+                                <button
+                                  className="delete-button"
+                                  onClick={() => handleDeleteStock(item.medicineName)}
+                                >
+                                  Delete
+                                </button>
+                              </>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                ) : (
+                  <p>No stock details available.</p>
+                )}
+              </div>
+              <div className="modal-footer">
+                <button className="close-button" onClick={handleCloseDetails}>
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Map Modal for Location */}
+        {mapLocation && (
+          <div className="modal-overlay">
+            <div className="modal-content">
+              <div className="modal-header">
+                <h3>Location - {mapLocation.name}</h3>
+                <button className="close-button" onClick={() => setMapLocation(null)}>
+                  ×
+                </button>
+              </div>
+              <div className="modal-body">
+                <div className="map-container">
+                  <MapContainer
+                    center={{
+                      lat: mapLocation.coordinates[1],
+                      lng: mapLocation.coordinates[0],
+                    }}
+                    zoom={15}
+                    style={{ height: "400px", width: "100%" }}
+                  >
+                    <TileLayer
+                      url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                      attribution='&copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors'
+                    />
+                    <Marker
+                      position={{
+                        lat: mapLocation.coordinates[1],
+                        lng: mapLocation.coordinates[0],
+                      }}
+                      icon={pharmacyMarkerIcon}
+                    >
+                      <Popup>{mapLocation.name}</Popup>
+                    </Marker>
+                  </MapContainer>
+                </div>
+              </div>
+              <div className="modal-footer">
+                <button className="close-button" onClick={() => setMapLocation(null)}>
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Edit Pharmacy Modal */}
         {showEditModal && (
           <div className="modal-overlay">
             <div className="modal-content">
@@ -372,6 +878,22 @@ const PharmacyDashboard = () => {
                     />
                   </div>
                 </div>
+                <div className="form-group">
+                  <label htmlFor="edit-owner">Pharmacy Owner</label>
+                  <select
+                    id="edit-owner"
+                    name="ownerId"
+                    value={editData.ownerId || ""}
+                    onChange={handleEditChange}
+                  >
+                    <option value="">-- Select Owner --</option>
+                    {pharmacyOwners.map(owner => (
+                      <option key={owner._id} value={owner._id}>
+                        {owner.name} ({owner.email})
+                      </option>
+                    ))}
+                  </select>
+                </div>
               </div>
               <div className="modal-footer">
                 <button 
@@ -391,6 +913,147 @@ const PharmacyDashboard = () => {
           </div>
         )}
 
+        {/* Pharmacy Details Modal */}
+        {showPharmacyDetails && selectedPharmacy && (
+          <div className="modal-overlay">
+            <div className="modal-content">
+              <div className="modal-header">
+                <h3>Pharmacy Details</h3>
+                <button className="close-button" onClick={() => setShowPharmacyDetails(false)}>×</button>
+              </div>
+              <div className="modal-body">
+                <div className="detail-group">
+                  <h4>Pharmacy Information</h4>
+                  <div className="detail-item">
+                    <span className="detail-label">Name:</span>
+                    <span className="detail-value">{selectedPharmacy.name}</span>
+                  </div>
+                  <div className="detail-item">
+                    <span className="detail-label">Address:</span>
+                    <span className="detail-value">{selectedPharmacy.address}</span>
+                  </div>
+                  {selectedPharmacy.location?.coordinates?.length === 2 && (
+                    <div className="detail-item">
+                      <span className="detail-label">Coordinates:</span>
+                      <span className="detail-value">
+                        {selectedPharmacy.location.coordinates[1].toFixed(6)}, {selectedPharmacy.location.coordinates[0].toFixed(6)}
+                      </span>
+                    </div>
+                  )}
+                </div>
+                
+                <div className="detail-group">
+                  <h4>Medicine Information</h4>
+                  <div className="detail-item">
+                    <span className="detail-label">Medicine Name:</span>
+                    <span className="detail-value">{selectedPharmacy.medicineName}</span>
+                  </div>
+                  <div className="detail-item">
+                    <span className="detail-label">Price:</span>
+                    <span className="detail-value">${formatPrice(selectedPharmacy.price)}</span>
+                  </div>
+                  <div className="detail-item">
+                    <span className="detail-label">Availability:</span>
+                    <span className={`detail-value ${selectedPharmacy.isAvailable ? "status-available" : "status-unavailable"}`}>
+                      {selectedPharmacy.isAvailable ? "Available" : "Not Available"}
+                    </span>
+                  </div>
+                </div>
+                
+                {selectedPharmacy.ownerId && (
+                  <div className="detail-group">
+                    <h4>Owner Information</h4>
+                    <div className="detail-item">
+                      <span className="detail-label">Owner ID:</span>
+                      <span className="detail-value">{selectedPharmacy.ownerId}</span>
+                    </div>
+                    {pharmacyOwners.find(o => o._id === selectedPharmacy.ownerId) && (
+                      <>
+                        <div className="detail-item">
+                          <span className="detail-label">Owner Name:</span>
+                          <span className="detail-value">
+                            {pharmacyOwners.find(o => o._id === selectedPharmacy.ownerId).name}
+                          </span>
+                        </div>
+                        <div className="detail-item">
+                          <span className="detail-label">Owner Email:</span>
+                          <span className="detail-value">
+                            {pharmacyOwners.find(o => o._id === selectedPharmacy.ownerId).email}
+                          </span>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                )}
+              </div>
+              <div className="modal-footer">
+                <button 
+                  className="edit-button-large" 
+                  onClick={() => {
+                    handleEditClick(selectedPharmacy);
+                    setShowPharmacyDetails(false);
+                  }}
+                >
+                  Edit Pharmacy
+                </button>
+                <button 
+                  className="delete-button-large" 
+                  onClick={() => {
+                    setShowPharmacyDetails(false);
+                    handleDelete(selectedPharmacy._id);
+                  }}
+                >
+                  Delete Pharmacy
+                </button>
+                <button 
+                  className="close-button-large" 
+                  onClick={() => setShowPharmacyDetails(false)}
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+     
+        {/* User Details Modal */}
+        {showUserDetails && selectedUser && (
+          <div className="modal-overlay">
+            <div className="modal-content">
+              <div className="modal-header">
+                <h3>User Details</h3>
+                <button className="close-button" onClick={() => setShowUserDetails(false)}>×</button>
+              </div>
+              <div className="modal-body">
+                <div className="detail-group">
+                  <h4>User Information</h4>
+                  <div className="detail-item">
+                    <span className="detail-label">ID:</span>
+                    <span className="detail-value">{selectedUser._id}</span>
+                  </div>
+                  <div className="detail-item">
+                    <span className="detail-label">Name:</span>
+                    <span className="detail-value">{selectedUser.name}</span>
+                  </div>
+                  <div className="detail-item">
+                    <span className="detail-label">Email:</span>
+                    <span className="detail-value">{selectedUser.email}</span>
+                  </div>
+                </div>
+              </div>
+              <div className="modal-footer">
+                <button 
+                  className="close-button-large" 
+                  onClick={() => setShowUserDetails(false)}
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Notification Toast */}
         {showNotification && (
           <div className={`notification ${messageType}`}>
@@ -399,7 +1062,7 @@ const PharmacyDashboard = () => {
         )}
       </div>
       
-      {/* CSS Styles */}
+      
       <style jsx>{`
         .dashboard-container {
           padding: 24px;
@@ -415,15 +1078,15 @@ const PharmacyDashboard = () => {
         
         .stats-container {
           display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-          gap: 20px;
+          grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+          gap: 16px;
           margin-bottom: 24px;
         }
         
         .stat-card {
           background-color: #fff;
           border-radius: 10px;
-          padding: 24px;
+          padding: 20px;
           text-align: center;
           box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
           transition: transform 0.2s;
@@ -434,12 +1097,12 @@ const PharmacyDashboard = () => {
         }
         
         .stat-icon {
-          font-size: 32px;
-          margin-bottom: 12px;
+          font-size: 28px;
+          margin-bottom: 10px;
         }
         
         .stat-value {
-          font-size: 28px;
+          font-size: 24px;
           font-weight: bold;
           color: #3498db;
         }
@@ -447,7 +1110,40 @@ const PharmacyDashboard = () => {
         .stat-label {
           color: #7f8c8d;
           font-size: 14px;
-          margin-top: 8px;
+          margin-top: 6px;
+        }
+        
+        /* Navigation Tabs */
+        .nav-tabs {
+          display: flex;
+          gap: 8px;
+          margin-bottom: 24px;
+          overflow-x: auto;
+          padding-bottom: 8px;
+        }
+        
+        .tab-button {
+          background-color: #f8f9fa;
+          border: 1px solid #ddd;
+          border-radius: 6px;
+          padding: 12px 16px;
+          font-size: 16px;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          white-space: nowrap;
+          transition: background-color 0.2s;
+        }
+        
+        .tab-button.active {
+          background-color: #3498db;
+          color: white;
+          border-color: #3498db;
+        }
+        
+        .tab-icon {
+          margin-right: 8px;
+          font-size: 18px;
         }
         
         .dashboard-card {
@@ -462,6 +1158,9 @@ const PharmacyDashboard = () => {
           background-color: #3498db;
           color: white;
           padding: 16px 24px;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
         }
         
         .card-header h3 {
@@ -534,25 +1233,33 @@ const PharmacyDashboard = () => {
           overflow-x: auto;
         }
         
-        .pharmacy-table {
+        .pharmacy-table, .user-table, .owner-table {
           width: 100%;
           border-collapse: collapse;
         }
         
         .pharmacy-table th,
-        .pharmacy-table td {
+        .pharmacy-table td,
+        .user-table th,
+        .user-table td,
+        .owner-table th,
+        .owner-table td {
           padding: 12px 16px;
           text-align: left;
           border-bottom: 1px solid #eee;
         }
         
-        .pharmacy-table th {
+        .pharmacy-table th,
+        .user-table th,
+        .owner-table th {
           background-color: #f8f9fa;
           font-weight: 600;
           color: #34495e;
         }
         
-        .pharmacy-table tr:hover {
+        .pharmacy-table tr:hover,
+        .user-table tr:hover,
+        .owner-table tr:hover {
           background-color: #f8f9fa;
         }
         
