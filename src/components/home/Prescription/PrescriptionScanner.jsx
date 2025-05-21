@@ -224,14 +224,38 @@ const googleLensService = {
   // Process image using Google Lens API via backend proxy
   processImageWithGoogleLens: async (imageData) => {
     try {
+      // Add a timeout to the request to handle unresponsive servers
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
+      
       const response = await axios.post('http://localhost:5000/api/google-lens/analyze', {
         image: imageData
-      });
+      }, { signal: controller.signal });
+      
+      clearTimeout(timeoutId);
+      
+      if (!response.data || response.status !== 200) {
+        throw new Error(`Invalid response from Google Lens server: ${response.status}`);
+      }
       
       return response.data;
     } catch (error) {
-      console.error("Error using Google Lens:", error);
-      throw new Error("Failed to analyze image with Google Lens");
+      if (error.name === 'AbortError') {
+        console.error("Google Lens request timed out");
+        throw new Error("Google Lens service is not responding");
+      } else if (error.response) {
+        // The server responded with a status code outside the 2xx range
+        console.error("Google Lens API error:", error.response.data);
+        throw new Error(`Google Lens service error: ${error.response.status} - ${error.response.data.message || 'Unknown error'}`);
+      } else if (error.request) {
+        // The request was made but no response was received
+        console.error("No response from Google Lens API:", error.request);
+        throw new Error("No response from Google Lens service. Is the server running?");
+      } else {
+        // Something else happened while setting up the request
+        console.error("Error using Google Lens:", error);
+        throw new Error(`Failed to connect to Google Lens service: ${error.message}`);
+      }
     }
   },
   
@@ -247,6 +271,67 @@ const googleLensService = {
     return lensResults.detectedItems
       .filter(item => item.confidence > 0.90)
       .map(item => item.name);
+  }
+};
+
+// Advanced AI-powered medicine recognition API integration
+const aiMedicineRecognitionService = {
+  // Process image using specialized medicine recognition AI API
+  analyzeImage: async (imageData) => {
+    try {
+      // Add a timeout to the request to handle unresponsive servers
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
+      
+      const response = await axios.post('http://localhost:5000/api/ai-medicine-scan', {
+        image: imageData,
+        options: {
+          enhancedRecognition: true,
+          includeGenericNames: true,
+          includeDosage: true,
+          confidenceThreshold: 0.92 // Higher threshold for better accuracy
+        }
+      }, { signal: controller.signal });
+      
+      clearTimeout(timeoutId);
+      
+      if (!response.data || response.status !== 200) {
+        throw new Error(`Invalid response from server: ${response.status}`);
+      }
+      
+      return response.data;
+    } catch (error) {
+      if (error.name === 'AbortError') {
+        console.error("AI medicine recognition request timed out");
+        throw new Error("AI medicine recognition service is not responding");
+      } else if (error.response) {
+        // The server responded with a status code outside the 2xx range
+        console.error("AI medicine recognition API error:", error.response.data);
+        throw new Error(`AI service error: ${error.response.status} - ${error.response.data.message || 'Unknown error'}`);
+      } else if (error.request) {
+        // The request was made but no response was received
+        console.error("No response from AI medicine recognition API:", error.request);
+        throw new Error("No response from AI medicine recognition service. Is the server running?");
+      } else {
+        // Something else happened while setting up the request
+        console.error("Error using AI medicine recognition API:", error);
+        throw new Error(`Failed to connect to AI recognition service: ${error.message}`);
+      }
+    }
+  },
+  
+  // Extract structured medicine information from API results
+  extractMedicineInfo: (apiResults) => {
+    if (!apiResults || !apiResults.medications) {
+      return [];
+    }
+    
+    return apiResults.medications.map(med => ({
+      name: med.name,
+      genericName: med.genericName,
+      dosage: med.dosage,
+      confidence: med.confidence
+    }));
   }
 };
 
@@ -487,67 +572,127 @@ const PrescriptionScanner = () => {
       
       console.log("Extracted text:", extractedText);
 
+      // Use AI-powered medicine recognition service
+      setProcessingStep("Analyzing prescription with AI-powered recognition...");
+      try {
+        const aiResults = await aiMedicineRecognitionService.analyzeImage(enhancedImageUrl);
+        const aiMedicines = aiMedicineRecognitionService.extractMedicineInfo(aiResults);
+        
+        if (aiMedicines.length > 0) {
+          detectedMedicines = aiMedicines.map(med => med.name);
+          console.log("Medicines detected by AI recognition:", aiMedicines);
+        }
+      } catch (aiError) {
+        console.error("Error with AI medicine recognition service:", aiError);
+        // Don't throw the error here, just log it and continue with other methods
+        // We'll use extracted text and text recognition methods instead
+      }
+
       // Get user location
       setProcessingStep("Getting your location...");
-      const position = await new Promise((resolve, reject) => {
-        navigator.geolocation.getCurrentPosition(resolve, reject, {
-          enableHighAccuracy: true,
-          timeout: 10000,
-          maximumAge: 0
+      let position;
+      try {
+        position = await new Promise((resolve, reject) => {
+          navigator.geolocation.getCurrentPosition(
+            resolve, 
+            (geoError) => {
+              console.error("Geolocation error:", geoError);
+              if (geoError.code === 1) {
+                reject(new Error("Location access denied. Please enable location services for this site."));
+              } else if (geoError.code === 2) {
+                reject(new Error("Location unavailable. Please try again or enter location manually."));
+              } else if (geoError.code === 3) {
+                reject(new Error("Location request timed out. Please try again or check your connection."));
+              } else {
+                reject(new Error("Could not determine your location. Please try again later."));
+              }
+            }, 
+            {
+              enableHighAccuracy: true,
+              timeout: 10000,
+              maximumAge: 0
+            }
+          );
         });
-      });
+      } catch (locationError) {
+        console.error("Failed to get user location:", locationError);
+        throw new Error(`Location error: ${locationError.message}`);
+      }
 
       // Send text + user location to backend with enhanced data
       setProcessingStep("Finding pharmacies with your medicines...");
-      const response = await fetch('http://localhost:5000/api/process-prescription', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          imageText: extractedText,
-          enhancedImage: enhancedImageUrl,
-          detectedMedicines: detectedMedicines.length > 0 ? detectedMedicines : undefined,
-          userLocation: {
-            latitude: position.coords.latitude,
-            longitude: position.coords.longitude,
-            accuracy: position.coords.accuracy
-          },
-          confidence: 0.7,
-          usedGoogleLens: useGoogleLens
-        })
-      });
-
-      if (!response.ok) {
-        throw new Error(`Server error: ${response.status}`);
-      }
-
-      const data = await response.json();
-      console.log("Detected medicines:", data.detectedMedicines);
-      console.log("Nearby pharmacies:", data.pharmacies);
-
-      // Update the UI with results
-      setExtractedMedicines(data.detectedMedicines);
-      
-      // Format pharmacy results
-      const formattedPharmacies = [];
-      
-      // Group pharmacies by medicine
-      data.detectedMedicines.forEach(medicine => {
-        const pharmaciesForMedicine = data.pharmacies.filter(pharmacy => 
-          pharmacy.medicineName.toLowerCase() === medicine.toLowerCase()
-        );
+      try {
+        // Set up a timeout for the fetch request
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 20000); // 20 seconds timeout
         
-        if (pharmaciesForMedicine.length > 0) {
-          formattedPharmacies.push({
-            medicine: medicine,
-            pharmacies: pharmaciesForMedicine
-          });
+        const response = await fetch('http://localhost:5000/api/process-prescription', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            imageText: extractedText,
+            enhancedImage: enhancedImageUrl,
+            detectedMedicines: detectedMedicines.length > 0 ? detectedMedicines : undefined,
+            userLocation: {
+              latitude: position.coords.latitude,
+              longitude: position.coords.longitude,
+              accuracy: position.coords.accuracy
+            },
+            confidence: 0.7,
+            usedGoogleLens: useGoogleLens
+          }),
+          signal: controller.signal
+        });
+        
+        clearTimeout(timeoutId);
+
+        if (!response.ok) {
+          if (response.status === 404) {
+            throw new Error("Backend API endpoint not found. Is the server running?");
+          } else if (response.status === 500) {
+            throw new Error("Backend server error. Check server logs for details.");
+          } else {
+            throw new Error(`Server error: ${response.status} - ${response.statusText}`);
+          }
         }
-      });
-      
-      setPharmacyResults(formattedPharmacies);
-      
-      if (formattedPharmacies.length === 0) {
-        setError("No pharmacies found with the medicines in your prescription");
+
+        const data = await response.json();
+        console.log("Detected medicines:", data.detectedMedicines);
+        console.log("Nearby pharmacies:", data.pharmacies);
+
+        // Update the UI with results
+        setExtractedMedicines(data.detectedMedicines);
+        
+        // Format pharmacy results
+        const formattedPharmacies = [];
+        
+        // Group pharmacies by medicine
+        data.detectedMedicines.forEach(medicine => {
+          const pharmaciesForMedicine = data.pharmacies.filter(pharmacy => 
+            pharmacy.medicineName.toLowerCase() === medicine.toLowerCase()
+          );
+          
+          if (pharmaciesForMedicine.length > 0) {
+            formattedPharmacies.push({
+              medicine: medicine,
+              pharmacies: pharmaciesForMedicine
+            });
+          }
+        });
+        
+        setPharmacyResults(formattedPharmacies);
+        
+        if (formattedPharmacies.length === 0) {
+          setError("No pharmacies found with the medicines in your prescription");
+        }
+      } catch (apiError) {
+        if (apiError.name === 'AbortError') {
+          console.error("Backend request timed out");
+          throw new Error("Backend service is not responding. Please try again later.");
+        } else {
+          console.error("Error processing prescription with backend:", apiError);
+          throw new Error(`Failed to process prescription: ${apiError.message}`);
+        }
       }
     } catch (error) {
       console.error("Error processing prescription:", error);
