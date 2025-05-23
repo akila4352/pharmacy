@@ -21,6 +21,9 @@ const Headerpowner = () => {
             <li>
                 <Link to="/add-pharmacy">home</Link>
               </li>
+              <li>
+                <Link to="/manage-calendar">Manage Calendar</Link>
+              </li>
           
              
         

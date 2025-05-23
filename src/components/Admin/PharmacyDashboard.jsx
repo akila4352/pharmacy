@@ -41,6 +41,7 @@ const PharmacyDashboard = () => {
   const [showStockDetails, setShowStockDetails] = useState(false);
   const [editStock, setEditStock] = useState(null); // Track the medicine being edited
   const [mapLocation, setMapLocation] = useState(null); // Track location for the map modal
+  const [ownerDetails, setOwnerDetails] = useState(null); // Track owner details
 
   const defaultCenter = { lat: 6.0825, lng: 80.2973 };
 
@@ -213,9 +214,21 @@ const PharmacyDashboard = () => {
     }
   };
 
-  const handleViewPharmacyDetails = (pharmacy) => {
+  const handleViewPharmacyDetails = async (pharmacy) => {
     setSelectedPharmacy(pharmacy);
     setShowPharmacyDetails(true);
+
+    // Fetch owner details
+    if (pharmacy.ownerId) {
+      try {
+        const res = await fetch(`${API_URL}/api/users/${pharmacy.ownerId}`);
+        if (!res.ok) throw new Error(await res.text());
+        const data = await res.json();
+        setOwnerDetails(data);
+      } catch (err) {
+        showMessage(`Error fetching owner details: ${err.message}`, "error");
+      }
+    }
   };
 
   const handleViewUserDetails = (user) => {
@@ -317,6 +330,19 @@ const PharmacyDashboard = () => {
     return (price !== undefined && price !== null) ? Number(price).toFixed(2) : '0.00';
   };
 
+  const handleFixAvailability = async () => {
+    try {
+        const res = await fetch(`${API_URL}/api/pharmacies/fix-availability`, {
+            method: "PUT",
+        });
+        if (!res.ok) throw new Error(await res.text());
+        showMessage("All pharmacies are now marked as available.", "success");
+        fetchAllPharmacies();
+    } catch (err) {
+        showMessage(`Error: ${err.message}`, "error");
+    }
+};
+
   return (
     <div>
       <HeaderAdmin />
@@ -388,6 +414,9 @@ const PharmacyDashboard = () => {
               >
                 Refresh Data
               </button>
+              <button className="fix-button" onClick={handleFixAvailability}>
+                Fix Availability
+              </button>
             </div>
             <div className="card-body">
               <div className="map-container">
@@ -437,9 +466,7 @@ const PharmacyDashboard = () => {
                     >
                       <div className="pharmacy-list-name">{pharmacy.name}</div>
                       <div className="pharmacy-list-medicine">{pharmacy.medicineName}</div>
-                      <span className={pharmacy.isAvailable ? "status-available" : "status-unavailable"}>
-                        {pharmacy.isAvailable ? "Available" : "Not Available"}
-                      </span>
+                      <span className="status-available">Available</span>
                     </div>
                   ))}
                 </div>
@@ -960,29 +987,21 @@ const PharmacyDashboard = () => {
                   </div>
                 </div>
                 
-                {selectedPharmacy.ownerId && (
+                {ownerDetails && (
                   <div className="detail-group">
                     <h4>Owner Information</h4>
                     <div className="detail-item">
-                      <span className="detail-label">Owner ID:</span>
-                      <span className="detail-value">{selectedPharmacy.ownerId}</span>
+                      <span className="detail-label">Name:</span>
+                      <span className="detail-value">{ownerDetails.name}</span>
                     </div>
-                    {pharmacyOwners.find(o => o._id === selectedPharmacy.ownerId) && (
-                      <>
-                        <div className="detail-item">
-                          <span className="detail-label">Owner Name:</span>
-                          <span className="detail-value">
-                            {pharmacyOwners.find(o => o._id === selectedPharmacy.ownerId).name}
-                          </span>
-                        </div>
-                        <div className="detail-item">
-                          <span className="detail-label">Owner Email:</span>
-                          <span className="detail-value">
-                            {pharmacyOwners.find(o => o._id === selectedPharmacy.ownerId).email}
-                          </span>
-                        </div>
-                      </>
-                    )}
+                    <div className="detail-item">
+                      <span className="detail-label">Email:</span>
+                      <span className="detail-value">{ownerDetails.email}</span>
+                    </div>
+                    <div className="detail-item">
+                      <span className="detail-label">Phone:</span>
+                      <span className="detail-value">{ownerDetails.phone || "N/A"}</span>
+                    </div>
                   </div>
                 )}
               </div>

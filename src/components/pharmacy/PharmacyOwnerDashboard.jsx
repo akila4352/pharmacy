@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from "react";
 
+const API_URL = process.env.REACT_APP_API_URL || "http://localhost:5000";
+
 const PharmacyOwnerDashboard = () => {
   const [medicines, setMedicines] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
@@ -20,7 +22,7 @@ const PharmacyOwnerDashboard = () => {
 
   const fetchMedicines = async () => {
     try {
-      const response = await fetch("http://localhost:8080/api/medicines");
+      const response = await fetch(`${API_URL}/api/medicines`);
       if (response.ok) {
         const data = await response.json();
         setMedicines(data);
@@ -36,7 +38,7 @@ const PharmacyOwnerDashboard = () => {
     e.preventDefault();
     try {
       const response = await fetch(
-        `http://localhost:8080/api/medicines/search?query=${searchQuery}`
+        `${API_URL}/api/medicines/search?query=${searchQuery}`
       );
       if (response.ok) {
         const data = await response.json();
@@ -51,7 +53,7 @@ const PharmacyOwnerDashboard = () => {
 
   const handleAddMedicine = async () => {
     try {
-      const response = await fetch("http://localhost:8080/api/medicines", {
+      const response = await fetch(`${API_URL}/api/medicines`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -78,7 +80,7 @@ const PharmacyOwnerDashboard = () => {
   const handleUpdateMedicine = async () => {
     try {
       const response = await fetch(
-        `http://localhost:8080/api/medicines/${editMedicine.id}`,
+        `${API_URL}/api/medicines/${editMedicine.id}`,
         {
           method: "PUT",
           headers: {
@@ -101,7 +103,7 @@ const PharmacyOwnerDashboard = () => {
   const handleDeleteMedicine = async (id) => {
     try {
       const response = await fetch(
-        `http://localhost:8080/api/medicines/${id}`,
+        `${API_URL}/api/medicines/${id}`,
         { method: "DELETE" }
       );
       if (response.ok) {
