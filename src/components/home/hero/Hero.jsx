@@ -1,41 +1,46 @@
 import React, { useState, useEffect, useRef } from "react";
-import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
+import {
+  MapContainer,
+  TileLayer,
+  Marker,
+  Popup,
+  useMap
+} from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import "leaflet-routing-machine";
 import Header from "../../common/header/Header";
 import "./hero.css";
 
-// API base URL
-const API_URL = process.env.REACT_APP_API_URL || "http://localhost:5000";
-
-// Fix default Leaflet marker icons
+// Fix default marker icons
 import iconUrl from "leaflet/dist/images/marker-icon.png";
-import iconShadowUrl from "leaflet/dist/images/marker-shadow.png";
+import iconShadow from "leaflet/dist/images/marker-shadow.png";
 
 const DefaultIcon = L.icon({
   iconUrl,
-  shadowUrl: iconShadowUrl,
+  shadowUrl: iconShadow,
   iconSize: [25, 41],
   iconAnchor: [12, 41]
 });
 L.Marker.prototype.options.icon = DefaultIcon;
 
-// Custom icons
+// Custom Icons
 const pharmacyIcon = new L.Icon({
-  iconUrl: "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-blue.png",
-  shadowUrl: iconShadowUrl,
+  iconUrl:
+    "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-blue.png",
+  shadowUrl: iconShadow,
   iconSize: [25, 41],
   iconAnchor: [12, 41]
 });
 const userIcon = new L.Icon({
-  iconUrl: "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png",
-  shadowUrl: iconShadowUrl,
+  iconUrl:
+    "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png",
+  shadowUrl: iconShadow,
   iconSize: [25, 41],
   iconAnchor: [12, 41]
 });
 
-// Component to select and mark user location
+// Component: Location Marker
 function LocationMarker({ position, setPosition }) {
   const map = useMap();
 
@@ -43,9 +48,7 @@ function LocationMarker({ position, setPosition }) {
     if (!position) {
       map.on("click", (e) => setPosition(e.latlng));
     }
-    return () => {
-      map.off("click");
-    };
+    return () => map.off("click");
   }, [map, position, setPosition]);
 
   return position ? (
@@ -55,7 +58,7 @@ function LocationMarker({ position, setPosition }) {
   ) : null;
 }
 
-// Component to draw route
+// Component: Routing Machine
 function RoutingMachine({ userLocation, pharmacyLocation }) {
   const map = useMap();
   const controlRef = useRef(null);
@@ -74,15 +77,17 @@ function RoutingMachine({ userLocation, pharmacyLocation }) {
         addWaypoints: false,
         draggableWaypoints: false,
         routeWhileDragging: false,
-        lineOptions: { styles: [{ color: '#6FA1EC', weight: 4 }] }
+        lineOptions: { styles: [{ color: "#6FA1EC", weight: 4 }] }
       }).addTo(map);
 
       controlRef.current = routingControl;
 
-      routingControl.on('routesfound', (e) => {
+      routingControl.on("routesfound", (e) => {
         const { totalDistance, totalTime } = e.routes[0].summary;
-        document.getElementById('distance-value').textContent = (totalDistance / 1000).toFixed(2) + ' km';
-        document.getElementById('time-value').textContent = Math.round(totalTime / 60) + ' min';
+        document.getElementById("distance-value").textContent =
+          (totalDistance / 1000).toFixed(2) + " km";
+        document.getElementById("time-value").textContent =
+          Math.round(totalTime / 60) + " min";
       });
 
       return () => {
@@ -96,197 +101,177 @@ function RoutingMachine({ userLocation, pharmacyLocation }) {
   return null;
 }
 
-// Component to handle map updates when pharmacies are loaded
-function MapUpdater({ pharmacies, userPos }) {
-  const map = useMap();
-  
-  useEffect(() => {
-    if (pharmacies.length > 0 && userPos) {
-      // Get bounds that include all points
-      const bounds = L.latLngBounds([userPos]);
-      
-      pharmacies.forEach(pharmacy => {
-        if (pharmacy.location && pharmacy.location.coordinates) {
-          const lat = pharmacy.location.coordinates[1];
-          const lng = pharmacy.location.coordinates[0];
-          bounds.extend([lat, lng]);
-        }
-      });
-      
-      // Fit map to these bounds
-      map.fitBounds(bounds, { padding: [50, 50] });
-    }
-  }, [map, pharmacies, userPos]);
-
-  return null;
-}
+const API_URL = process.env.REACT_APP_API_URL || "http://localhost:5000";
 
 const Hero = () => {
-  const [userPos, setUserPos] = useState(null);
-  const [query, setQuery] = useState("");
+  const [userLocation, setUserLocation] = useState(null);
   const [pharmacies, setPharmacies] = useState([]);
-  const [selectedPharma, setSelectedPharma] = useState(null);
-  const [routeInfo, setRouteInfo] = useState({ distance: '', time: '' });
-  const [message, setMessage] = useState(null);
+  const [selectedPharmacy, setSelectedPharmacy] = useState(null);
+  const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [message, setMessage] = useState(null);
 
-  const defaultCenter = [6.08249715365853, 80.29727865317939];
-  const mapRef = useRef(null);
+  // When a pharmacy marker is clicked, set as selected and show route if user location is set
+  const handleMarkerClick = (pharmacy) => {
+    setSelectedPharmacy(pharmacy);
+  };
 
-  const handleSearchChange = (e) => setQuery(e.target.value);
-
+  // Search handler
   const handleSearch = async (e) => {
     e.preventDefault();
     setLoading(true);
     setError(null);
     setMessage(null);
-    
-    if (!userPos) {
-      setMessage('Please click on the map to select your location.');
+    setPharmacies([]);
+    setSelectedPharmacy(null);
+
+    if (!search.trim()) {
+      setError("Please enter a medicine name.");
       setLoading(false);
       return;
     }
 
     try {
-      // Clear previous search results
-      setPharmacies([]);
-      setSelectedPharma(null);
-      
       const res = await fetch(
-        `${API_URL}/api/pharmacies/search?latitude=${userPos.lat}&longitude=${userPos.lng}&medicineName=${encodeURIComponent(query)}`
+        `${API_URL}/api/pharmacies/search?medicineName=${encodeURIComponent(search.trim())}`
       );
-      
-      if (!res.ok) {
-        const errorData = await res.json();
-        throw new Error(errorData.error || 'Failed to search pharmacies');
+      let data;
+      try {
+        data = await res.json();
+      } catch {
+        setError("Server error: Invalid response format.");
+        setLoading(false);
+        return;
       }
-      
-      const data = await res.json();
-      console.log("Pharmacies found:", data); // Debugging
-      
+      if (!res.ok) {
+        setError(data && data.error ? data.error : "Failed to search pharmacies");
+        setLoading(false);
+        return;
+      }
       setPharmacies(data);
-      
       if (data.length === 0) {
-        setMessage('No pharmacies found with this medicine nearby.');
+        setMessage("No pharmacies found with this medicine.");
       } else {
-        setMessage(`Found ${data.length} pharmacies with ${query}`);
+        setMessage(`Found ${data.length} pharmacies with "${search}"`);
       }
     } catch (err) {
-      console.error("Search error:", err);
-      setError(`Error searching pharmacies: ${err.message}`);
-      setMessage(null);
+      setError("Network error. Please try again.");
     } finally {
       setLoading(false);
     }
   };
 
-  const handlePharmaClick = (ph) => {
-    if (!ph.location || !ph.location.coordinates) {
-      console.error("Invalid pharmacy location data:", ph);
-      return;
-    }
-    
-    const lat = ph.location.coordinates[1];
-    const lng = ph.location.coordinates[0];
-    
-    console.log("Selected pharmacy:", ph.name, "at", lat, lng);
-    setSelectedPharma(ph);
-    setRouteInfo({ distance: 'Calculating...', time: 'Calculating...' });
-  };
-
   return (
-    <div>
+    <>
       <Header />
       <section className="hero">
         <div className="container">
-          <p className="heading">Find your medicine easier.</p>
-          <form className="flex" onSubmit={handleSearch}>
-            <div className="box">
-              <span>Medicine Name</span>
-              <input
-                type="text"
-                placeholder="Enter medicine name"
-                value={query}
-                onChange={handleSearchChange}
-                required
-              />
-            </div>
+          <h2>Find Medicine in Pharmacies</h2>
+          <form className="flex" onSubmit={handleSearch} style={{ marginBottom: 16 }}>
+            <input
+              type="text"
+              placeholder="Enter medicine name"
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              style={{ minWidth: 200, marginRight: 8 }}
+              required
+            />
             <button className="btn1" type="submit" disabled={loading}>
               {loading ? "Searching..." : "Search"}
             </button>
           </form>
-
           {message && <div className="message">{message}</div>}
           {error && <div className="error-message">{error}</div>}
 
-          <div style={{ height: "400px", width: "100%", marginTop: "20px" }}>
-            <MapContainer 
-              center={defaultCenter} 
-              zoom={13} 
-              style={{ height: "100%" }}
-              ref={mapRef}
-            >
-              <TileLayer
-                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-              />
-
-              <LocationMarker position={userPos} setPosition={setUserPos} />
-              <MapUpdater pharmacies={pharmacies} userPos={userPos} />
-
-              {pharmacies.map((ph) => {
-                if (!ph.location || !ph.location.coordinates || ph.location.coordinates.length !== 2) {
-                  console.warn("Invalid pharmacy location data:", ph);
-                  return null;
-                }
-                
-                const lat = ph.location.coordinates[1];
-                const lng = ph.location.coordinates[0];
-                
-                return (
-                  <Marker
-                    key={ph._id}
-                    position={[lat, lng]}
-                    icon={pharmacyIcon}
-                    eventHandlers={{ click: () => handlePharmaClick(ph) }}
-                  >
-                    <Popup>
-                      <div>
-                        <strong>{ph.name}</strong><br />
-                        {ph.address}<br />
-                        Medicine: {ph.medicineName}<br />
-                        Price: {ph.price}<br />
-                        {ph.isAvailable ? "In Stock" : "Out of Stock"}
-                      </div>
-                    </Popup>
-                  </Marker>
-                );
-              })}
-
-              {userPos && selectedPharma && selectedPharma.location && (
-                <RoutingMachine
-                  userLocation={userPos}
-                  pharmacyLocation={{
-                    lat: selectedPharma.location.coordinates[1],
-                    lng: selectedPharma.location.coordinates[0]
-                  }}
-                />
-              )}
-            </MapContainer>
+          <div id="distance-info">
+            <strong>Distance:</strong> <span id="distance-value">--</span>
+            &nbsp; | &nbsp;
+            <strong>Time:</strong> <span id="time-value">--</span>
           </div>
 
-          {selectedPharma && (
-            <div className="distance-info">
-              <h4>Route Details</h4>
-              <p>Destination: <strong>{selectedPharma.name}</strong></p>
-              <p>Distance: <strong id="distance-value">{routeInfo.distance}</strong></p>
-              <p>Estimated Time: <strong id="time-value">{routeInfo.time}</strong></p>
-            </div>
-          )}
+          <MapContainer
+            center={[10.7905, 78.7047]}
+            zoom={13}
+            style={{ height: "400px", width: "100%", marginTop: "20px" }}
+          >
+            <TileLayer
+              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+              attribution='&copy; <a href="http://osm.org/copyright">OpenStreetMap</a>'
+            />
 
+            <LocationMarker position={userLocation} setPosition={setUserLocation} />
+
+            {pharmacies.map((pharmacy, index) => {
+              // Only render marker if valid coordinates
+              if (
+                typeof pharmacy.location?.coordinates?.[1] !== "number" ||
+                typeof pharmacy.location?.coordinates?.[0] !== "number" ||
+                isNaN(pharmacy.location.coordinates[1]) ||
+                isNaN(pharmacy.location.coordinates[0])
+              ) {
+                return null;
+              }
+              // Find the stock item for the searched medicine
+              const stockItem = (pharmacy.stock || []).find(
+                item => item.medicineName?.toLowerCase() === search.trim().toLowerCase()
+              );
+              return (
+                <Marker
+                  key={pharmacy._id || index}
+                  position={[
+                    pharmacy.location.coordinates[1],
+                    pharmacy.location.coordinates[0]
+                  ]}
+                  icon={pharmacyIcon}
+                  eventHandlers={{
+                    click: () => handleMarkerClick(pharmacy)
+                  }}
+                >
+                  <Popup>
+                    <strong>{pharmacy.name}</strong>
+                    <br />
+                    {pharmacy.address}
+                    <br />
+                    Medicine: {stockItem ? stockItem.medicineName : "N/A"}
+                    <br />
+                    Price: {stockItem ? `$${stockItem.price?.toFixed(2)}` : "N/A"}
+                    <br />
+                    {stockItem
+                      ? stockItem.isAvailable
+                        ? "In Stock"
+                        : "Out of Stock"
+                      : "N/A"}
+                    <br />
+                    {userLocation && (
+                      <span>
+                        <button
+                          style={{ marginTop: 8, cursor: "pointer" }}
+                          onClick={() => handleMarkerClick(pharmacy)}
+                        >
+                          Show Route
+                        </button>
+                      </span>
+                    )}
+                  </Popup>
+                </Marker>
+              );
+            })}
+
+            {userLocation && selectedPharmacy && selectedPharmacy.location && (
+              <RoutingMachine
+                userLocation={userLocation}
+                pharmacyLocation={{
+                  lat: selectedPharmacy.location.coordinates[1],
+                  lng: selectedPharmacy.location.coordinates[0]
+                }}
+              />
+            )}
+          </MapContainer>
+
+          {/* Table of results */}
           {pharmacies.length > 0 && (
-            <div className="results">
+            <div className="results" style={{ marginTop: 24 }}>
               <h3>Search Results:</h3>
               <table>
                 <thead>
@@ -299,26 +284,40 @@ const Hero = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {pharmacies.map((ph) => (
-                    <tr 
-                      key={ph._id} 
-                      onClick={() => handlePharmaClick(ph)}
-                      className={selectedPharma && selectedPharma._id === ph._id ? "selected-row" : ""}
-                    >
-                      <td>{ph.name}</td>
-                      <td>{ph.address}</td>
-                      <td>{ph.isAvailable ? "Available" : "Not Available"}</td>
-                      <td>${ph.price.toFixed(2)}</td>
-                      <td>{ph.medicineName}</td>
-                    </tr>
-                  ))}
+                  {pharmacies.map((pharmacy, idx) => {
+                    const stockItem = (pharmacy.stock || []).find(
+                      item => item.medicineName?.toLowerCase() === search.trim().toLowerCase()
+                    );
+                    return (
+                      <tr
+                        key={pharmacy._id || idx}
+                        onClick={() => setSelectedPharmacy(pharmacy)}
+                        className={selectedPharmacy && selectedPharmacy._id === pharmacy._id ? "selected-row" : ""}
+                        style={{ cursor: "pointer" }}
+                      >
+                        <td>{pharmacy.name}</td>
+                        <td>{pharmacy.address}</td>
+                        <td>
+                          {stockItem
+                            ? stockItem.isAvailable
+                              ? "Available"
+                              : "Not Available"
+                            : "N/A"}
+                        </td>
+                        <td>
+                          {stockItem ? `$${stockItem.price?.toFixed(2)}` : "N/A"}
+                        </td>
+                        <td>{stockItem ? stockItem.medicineName : "N/A"}</td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
           )}
         </div>
       </section>
-    </div>
+    </>
   );
 };
 
