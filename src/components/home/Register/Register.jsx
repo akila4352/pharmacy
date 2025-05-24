@@ -315,6 +315,11 @@ function Register() {
   const [error, setError] = useState("");
   const [position, setPosition] = useState(null);
   const [mapCenter, setMapCenter] = useState([20, 0]); // Default world center
+  const [showOtpScreen, setShowOtpScreen] = useState(false);
+  const [otp, setOtp] = useState("");
+  const [otpError, setOtpError] = useState("");
+  const [registeredEmail, setRegisteredEmail] = useState("");
+  const [resendStatus, setResendStatus] = useState(""); // for resend feedback
 
   // Get user's current location when component mounts
   useEffect(() => {
@@ -369,26 +374,140 @@ function Register() {
     }
 
     try {
-        const response = await fetch("http://localhost:5000/api/auth/register", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-            },
-            body: JSON.stringify(formData),
-        });
+      const response = await fetch("http://localhost:5000/api/auth/register", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(formData),
+      });
 
-        const data = await response.json();
+      const data = await response.json();
 
-        if (response.ok) {
-            alert("Registration successful! Please login.");
-            navigate("/login");
-        } else {
-            setError(data.message);
-        }
+      if (response.ok) {
+        // Instead of alert, show OTP screen
+        setRegisteredEmail(formData.email);
+        setShowOtpScreen(true);
+        setError("");
+      } else {
+        setError(data.message);
+      }
     } catch (err) {
-        setError("An error occurred during registration");
+      setError("An error occurred during registration");
     }
-};
+  };
+
+  const handleOtpSubmit = async (e) => {
+    e.preventDefault();
+    setOtpError("");
+    try {
+      const response = await fetch("http://localhost:5000/api/auth/verify-otp", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email: registeredEmail, otp }),
+      });
+      const data = await response.json();
+      if (response.ok && data.success) {
+        alert("Email verified! Please login.");
+        navigate("/login");
+      } else {
+        setOtpError(data.message || "Invalid OTP");
+      }
+    } catch (err) {
+      setOtpError("An error occurred during OTP verification");
+    }
+  };
+
+  const handleResendOtp = async () => {
+    setResendStatus("Sending...");
+    setOtpError("");
+    try {
+      const response = await fetch("http://localhost:5000/api/auth/resend-otp", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email: registeredEmail }),
+      });
+      if (response.status === 404) {
+        setResendStatus("Resend OTP feature is not available. Please contact support or try again later.");
+        setTimeout(() => setResendStatus(""), 5000);
+        return;
+      }
+      const data = await response.json();
+      if (response.ok && data.success) {
+        setResendStatus("OTP resent successfully!");
+      } else {
+        setResendStatus(data.message || "Failed to resend OTP");
+      }
+    } catch (err) {
+      setResendStatus("An error occurred while resending OTP");
+    }
+    setTimeout(() => setResendStatus(""), 3000);
+  };
+
+  // OTP Verification Screen UI
+  if (showOtpScreen) {
+    return (
+      <RootContainer>
+        <BgImgContainer>
+          <img src={bg} alt="Background" style={{ width: "100%" }} />
+        </BgImgContainer>
+        <BoxContainer style={{ margin: "auto" }}>
+          <div style={{ padding: "2em 1.5em", textAlign: "center" }}>
+            <h2 style={{ fontWeight: 700, marginBottom: 16 }}>OTP Verification</h2>
+            <div style={{
+              background: "#d4edda",
+              color: "#155724",
+              padding: "12px",
+              borderRadius: "6px",
+              marginBottom: "18px",
+              fontSize: "15px"
+            }}>
+              We've sent a verification code to your email - <b>{registeredEmail}</b>
+            </div>
+            <form onSubmit={handleOtpSubmit}>
+              <Input
+                type="text"
+                placeholder="Enter verification code"
+                value={otp}
+                onChange={e => setOtp(e.target.value)}
+                required
+                style={{ marginBottom: "12px", textAlign: "center", fontSize: "16px" }}
+              />
+              {otpError && <ErrorMessage>{otpError}</ErrorMessage>}
+              <SubmitButton type="submit" style={{ background: "#6C63FF", marginTop: 8 }}>
+                Submit
+              </SubmitButton>
+            </form>
+            <div style={{ marginTop: 18 }}>
+              <button
+                type="button"
+                onClick={handleResendOtp}
+                style={{
+                  background: "none",
+                  border: "none",
+                  color: "#007bff",
+                  textDecoration: "underline",
+                  cursor: "pointer",
+                  fontSize: "13px"
+                }}
+              >
+                Resend OTP
+              </button>
+              {resendStatus && (
+                <div style={{ fontSize: "12px", marginTop: 6, color: "#555" }}>
+                  {resendStatus}
+                </div>
+              )}
+            </div>
+          </div>
+        </BoxContainer>
+      </RootContainer>
+    );
+  }
 
   return (
     <RootContainer>

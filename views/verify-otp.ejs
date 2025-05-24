@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>OTP Verification</title>
+    <style>
+        /* ...basic styles... */
+        .container { max-width: 400px; margin: 50px auto; text-align: center; }
+        input, button { width: 100%; margin: 10px 0; padding: 10px; }
+        .success { background: #d4edda; color: #155724; padding: 10px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>OTP Verification</h2>
+        <div class="success">
+            We've sent a verification code to your email - <%= email %>
+        </div>
+        <form method="POST" action="/verify-otp">
+            <input type="hidden" name="email" value="<%= email %>">
+            <input type="text" name="otp" placeholder="Enter verification code" required>
+            <button type="submit">Submit</button>
+        </form>
+    </div>
+</body>
+</html>

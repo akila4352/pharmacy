@@ -344,7 +344,7 @@ function Login() {
             </Select>
           </FormContainer>
           <Marginer direction="vertical" margin={10} />
-          <MutedLink href="#">Forgot your password?</MutedLink>
+          <MutedLink as={Link} to="/forgot-password">Forgot your password?</MutedLink>
           <Marginer direction="vertical" margin="1.6em" />
           {error && <ErrorMessage>{error}</ErrorMessage>}
           <SubmitButton type="submit" onClick={handleSubmit}>

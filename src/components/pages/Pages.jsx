@@ -13,6 +13,9 @@ import Header from "../common/header/Header";
 import PrescriptionScanner from "../home/Prescription/PrescriptionScanner";
 import ManageCalendar from "../pharmacy/ManageCalendar";
 import PharmacyDashboard from "../Admin/PharmacyDashboard";
+ 
+import ForgotPassword from "../home/Login/ForgotPassword"
+
 const Pages = () => {
   return (
     <>
@@ -31,6 +34,10 @@ const Pages = () => {
           <Route path="/headerpowner" element={<Headerpowner/>} />
           <Route path="/prescriptionScanner" element={<PrescriptionScanner/>} />
           <Route path="/manage-calendar" element={<ManageCalendar/>} />
+          
+
+<Route path="/forgot-password" element={<ForgotPassword />} />
+
         </Routes>
       </Router>
     </>
