@@ -269,7 +269,7 @@ function Login() {
             navigate("/hero");
             break;
           case 'pharmacy':
-            navigate("/add-pharmacy");
+            navigate("/owner-dashboard");
             break;
           case 'admin':
             navigate("/manage-Pharmacy-medicines");

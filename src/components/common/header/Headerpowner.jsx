@@ -15,19 +15,20 @@ const Headerpowner = () => {
         <div className="container flex">
           <div className="logo">
             <img src="./images/logo.png" alt="logo" style={{ width: "75px", height: "auto" }} />
-          </div>
-          <div className="nav">
+          </div>          <div className="nav">
             <ul className={navList ? "small" : "flex"}>
-            <li>
-                <Link to="/add-pharmacy">home</Link>
+              <li>
+                <Link to="/owner-dashboard">Dashboard</Link>
               </li>
               <li>
-                <Link to="/manage-medicine">manage-medicine</Link>
+                <Link to="/add-pharmacy">Home</Link>
               </li>
               <li>
-                <Link to="/pharmacyInterface">pharmacyInterface</Link>
-                </li>
-        
+                <Link to="/manage-medicine">Manage Medicine</Link>
+              </li>
+              <li>
+                <Link to="/pharmacyInterface">Pharmacy Interface</Link>
+              </li>
             </ul>
           </div>
     
