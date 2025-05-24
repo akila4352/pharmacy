@@ -216,6 +216,13 @@ const Hero = () => {
               const stockItem = (pharmacy.stock || []).find(
                 item => item.medicineName?.toLowerCase() === search.trim().toLowerCase()
               );
+              // Get pharmacy contact number (from owner or pharmacy object)
+              let contactNumber = "";
+              if (pharmacy.ownerId && typeof pharmacy.ownerId === "object" && pharmacy.ownerId.phone) {
+                contactNumber = pharmacy.ownerId.phone;
+              } else if (pharmacy.phone) {
+                contactNumber = pharmacy.phone;
+              }
               return (
                 <Marker
                   key={pharmacy._id || index}
@@ -233,6 +240,12 @@ const Hero = () => {
                     <br />
                     {pharmacy.address}
                     <br />
+                    {contactNumber && (
+                      <>
+                        Contact: <a href={`tel:${contactNumber}`}>{contactNumber}</a>
+                        <br />
+                      </>
+                    )}
                     Medicine: {stockItem ? stockItem.medicineName : "N/A"}
                     <br />
                     Price: {stockItem ? `$${stockItem.price?.toFixed(2)}` : "N/A"}
@@ -278,6 +291,7 @@ const Hero = () => {
                   <tr>
                     <th>Name</th>
                     <th>Address</th>
+                    <th>Contact</th>
                     <th>Stock</th>
                     <th>Price</th>
                     <th>Medicine</th>
@@ -288,6 +302,13 @@ const Hero = () => {
                     const stockItem = (pharmacy.stock || []).find(
                       item => item.medicineName?.toLowerCase() === search.trim().toLowerCase()
                     );
+                    // Get pharmacy contact number (from owner or pharmacy object)
+                    let contactNumber = "";
+                    if (pharmacy.ownerId && typeof pharmacy.ownerId === "object" && pharmacy.ownerId.phone) {
+                      contactNumber = pharmacy.ownerId.phone;
+                    } else if (pharmacy.phone) {
+                      contactNumber = pharmacy.phone;
+                    }
                     return (
                       <tr
                         key={pharmacy._id || idx}
@@ -297,6 +318,11 @@ const Hero = () => {
                       >
                         <td>{pharmacy.name}</td>
                         <td>{pharmacy.address}</td>
+                        <td>
+                          {contactNumber ? (
+                            <a href={`tel:${contactNumber}`}>{contactNumber}</a>
+                          ) : "N/A"}
+                        </td>
                         <td>
                           {stockItem
                             ? stockItem.isAvailable

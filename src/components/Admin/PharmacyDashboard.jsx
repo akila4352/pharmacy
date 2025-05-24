@@ -32,7 +32,6 @@ const PharmacyDashboard = () => {
   const [showUserDetails, setShowUserDetails] = useState(false);
   const [stats, setStats] = useState({
     totalPharmacies: 0,
-    totalMedicines: 0,
     availableMedicines: 0,
     totalUsers: 0,
     totalOwners: 0,
@@ -54,10 +53,17 @@ const PharmacyDashboard = () => {
 
   useEffect(() => {
     // Update statistics whenever data changes
+    // Calculate available medicines from all pharmacies' stock
+    let availableMedicinesCount = 0;
+    pharmacies.forEach(pharmacy => {
+      if (Array.isArray(pharmacy.stock)) {
+        availableMedicinesCount += pharmacy.stock.filter(item => item.isAvailable).length;
+      }
+    });
     setStats({
       totalPharmacies: pharmacies.length,
-      totalMedicines: new Set(pharmacies.map(p => p.medicineName)).size,
-      availableMedicines: pharmacies.filter(p => p.isAvailable).length,
+      // totalMedicines removed
+      availableMedicines: availableMedicinesCount,
       totalUsers: users.length,
       totalOwners: pharmacyOwners.length,
     });
@@ -357,11 +363,6 @@ const PharmacyDashboard = () => {
             <div className="stat-label">Total Pharmacies</div>
           </div>
           <div className="stat-card">
-            <div className="stat-icon">💊</div>
-            <div className="stat-value">{stats.totalMedicines}</div>
-            <div className="stat-label">Unique Medicines</div>
-          </div>
-          <div className="stat-card">
             <div className="stat-icon">✅</div>
             <div className="stat-value">{stats.availableMedicines}</div>
             <div className="stat-label">Available Medicines</div>
@@ -414,9 +415,7 @@ const PharmacyDashboard = () => {
               >
                 Refresh Data
               </button>
-              <button className="fix-button" onClick={handleFixAvailability}>
-                Fix Availability
-              </button>
+         
             </div>
             <div className="card-body">
               <div className="map-container">
@@ -438,15 +437,6 @@ const PharmacyDashboard = () => {
                         <Popup>
                           <div className="pharmacy-popup">
                             <h4>{pharmacy.name}</h4>
-                            <p><strong>Medicine:</strong> {pharmacy.medicineName}</p>
-                            <p><strong>Price:</strong> ${formatPrice(pharmacy.price)}</p>
-                            <p><strong>Status:</strong> {pharmacy.isAvailable ? "Available" : "Not Available"}</p>
-                            <button 
-                              className="view-details-button"
-                              onClick={() => handleViewPharmacyDetails(pharmacy)}
-                            >
-                              View Details
-                            </button>
                           </div>
                         </Popup>
                       </Marker>
