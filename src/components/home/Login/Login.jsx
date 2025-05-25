@@ -255,7 +255,7 @@ function Login() {
     // formData.password = hashFunction(formData.password);
 
     try {
-      const response = await fetch("http://198.199.83.242:5000/api/auth/login", {
+      const response = await fetch("http://localhost:5000/api/auth/login", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
