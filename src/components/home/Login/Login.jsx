@@ -255,12 +255,13 @@ function Login() {
     // formData.password = hashFunction(formData.password);
 
     try {
-      const response = await fetch("http://198.199.83.242:5000/api/auth/login", {
+      const response = await fetch(
+        `${process.env.REACT_APP_BACKEND_URL}/api/auth/login`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(formData), // password should be plain text here
+        body: JSON.stringify(formData),
       });
 
       const data = await response.json();
