@@ -248,13 +248,19 @@ function Login() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    // Make sure to send the plain password (not hashed)
+    // If you have any hashing logic here, remove it!
+    // Example of what NOT to do:
+    // formData.password = hashFunction(formData.password);
+
     try {
       const response = await fetch("http://localhost:5000/api/auth/login", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(formData), // password should be plain text here
       });
 
       const data = await response.json();

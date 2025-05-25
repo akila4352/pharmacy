@@ -13,6 +13,7 @@ const UpdateStock = () => {
     medicineName: "",
     price: "",
     isAvailable: true,
+    quantity: "", // <-- add quantity field
   });
   const [bulkStock, setBulkStock] = useState([]);
 
@@ -40,7 +41,10 @@ const UpdateStock = () => {
 
       setMessage("Stock updated successfully!");
       setMessageType("success");
-      setSingleStock({ medicineName: "", price: "", isAvailable: true });
+      setSingleStock({ medicineName: "", price: "", isAvailable: true, quantity: "" });
+
+      // Refresh My Stock and Low Stock Alert
+      window.dispatchEvent(new Event("stock-updated"));
     } catch (err) {
       setMessage(`Error: ${err.message}`);
       setMessageType("error");
@@ -91,6 +95,9 @@ const UpdateStock = () => {
       setMessage("Bulk stock updated successfully!");
       setMessageType("success");
       setBulkStock([]);
+
+      // Refresh My Stock and Low Stock Alert
+      window.dispatchEvent(new Event("stock-updated"));
     } catch (err) {
       setMessage(`Error: ${err.message}`);
       setMessageType("error");
@@ -101,8 +108,8 @@ const UpdateStock = () => {
 
   const handleDownloadTemplate = () => {
     const templateData = [
-      { medicineName: "Paracetamol", price: 10.5, isAvailable: true },
-      { medicineName: "Ibuprofen", price: 15.0, isAvailable: false },
+      { medicineName: "Paracetamol", price: 10.5, isAvailable: true, quantity: 200 },
+      { medicineName: "Ibuprofen", price: 15.0, isAvailable: false, quantity: 50 },
     ];
     const worksheet = XLSX.utils.json_to_sheet(templateData);
     const workbook = XLSX.utils.book_new();
@@ -140,6 +147,18 @@ const UpdateStock = () => {
                 onChange={handleSingleChange}
                 required
                 step="0.01"
+              />
+            </div>
+            <div className="box">
+              <span>Quantity</span>
+              <input
+                type="number"
+                name="quantity"
+                placeholder="Enter quantity"
+                value={singleStock.quantity}
+                onChange={handleSingleChange}
+                required
+                min={0}
               />
             </div>
             <div className="box">

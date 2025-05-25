@@ -42,7 +42,7 @@ const PharmacyDashboard = () => {
   const [mapLocation, setMapLocation] = useState(null); // Track location for the map modal
   const [ownerDetails, setOwnerDetails] = useState(null); // Track owner details
 
-  const defaultCenter = { lat: 6.0825, lng: 80.2973 };
+  const defaultCenter = { lat: 6.0535, lng: 80.2210 };
 
   useEffect(() => {
     // Fetch all data when component mounts
@@ -1436,7 +1436,7 @@ const PharmacyDashboard = () => {
           }
         }
       `}</style>
-    </div>
+    </div> 
   );
 };
 

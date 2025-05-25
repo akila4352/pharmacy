@@ -112,203 +112,198 @@ const Header = () => {
               </span>
             )}
             {/* User profile icon and menu */}
-            <div className="toggle" style={{ display: "flex", alignItems: "center", gap: 12, position: "relative" }}>
-              <div style={{ cursor: "pointer", position: "relative" }}>
-                {profileData.profileIcon && profileData.profileIcon !== "default" ? (
-                  <img
-                    src={getAvatarSrc(profileData.profileIcon)}
-                    alt="Profile"
-                    style={{ width: 36, height: 36, borderRadius: "50%", border: "2px solid #eee" }}
-                    onClick={handleProfileClick}
-                  />
-                ) : (
-                  <FaUserCircle size={36} color="#888" onClick={handleProfileClick} />
-                )}
-                {/* Profile Popup */}
-                {showProfilePopup && (
-                  <div
-                    ref={popupRef}
-                    id="profile-popup"
-                    style={{
-                      position: "absolute",
-                      top: 44,
-                      right: 0,
-                      background: "#fff",
-                      border: "1px solid #444",
-                      borderRadius: 16,
-                      boxShadow: "0 4px 16px rgba(0,0,0,0.18)",
-                      minWidth: 320,
-                      zIndex: 100,
-                      padding: 24,
-                      display: "flex",
-                      flexDirection: "column",
-                      alignItems: "center",
-                      color: "#222"
-                    }}
-                  >
-                    {/* Large avatar */}
-                    <div style={{ marginBottom: 18 }}>
-                      {profileData.profileIcon && profileData.profileIcon !== "default" ? (
-                        <img
-                          src={getAvatarSrc(profileData.profileIcon)}
-                          alt="Profile"
-                          style={{ width: 90, height: 90, borderRadius: "50%", border: "3px solid #3498db" }}
-                        />
-                      ) : (
-                        <FaUserCircle size={90} color="#3498db" />
-                      )}
-                    </div>
-                    {/* Show greeting message with user name */}
-                    <div style={{ fontWeight: "bold", marginBottom: 12, textAlign: "center", fontSize: 20, color: "#3498db" }}>
-                      {profileData && (profileData.name || profileData.username) && (
-                        <>hi {profileData.name || profileData.username}</>
-                      )}
-                    </div>
-                    {editMode ? (
-                      <>
-                        <input
-                          type="text"
-                          name="name"
-                          value={profileData.name || ""}
-                          onChange={handleProfileChange}
-                          placeholder="Name"
-                          style={{
-                            width: "95%",
-                            marginBottom: 10,
-                            padding: 8,
-                            borderRadius: 8,
-                            border: "1px solid #bbb",
-                            background: "#f8f8f8",
-                            color: "#222"
-                          }}
-                        />
-                        <input
-                          type="email"
-                          name="email"
-                          value={profileData.email || ""}
-                          onChange={handleProfileChange}
-                          placeholder="Email"
-                          style={{
-                            width: "95%",
-                            marginBottom: 10,
-                            padding: 8,
-                            borderRadius: 8,
-                            border: "1px solid #bbb",
-                            background: "#f8f8f8",
-                            color: "#222"
-                          }}
-                        />
-                        <input
-                          type="text"
-                          name="phone"
-                          value={profileData.phone || ""}
-                          onChange={handleProfileChange}
-                          placeholder="Phone"
-                          style={{
-                            width: "95%",
-                            marginBottom: 10,
-                            padding: 8,
-                            borderRadius: 8,
-                            border: "1px solid #bbb",
-                            background: "#f8f8f8",
-                            color: "#222"
-                          }}
-                        />
-                        <select
-                          name="profileIcon"
-                          value={profileData.profileIcon || "default"}
-                          onChange={handleProfileChange}
-                          style={{
-                            width: "95%",
-                            marginBottom: 18,
-                            padding: 8,
-                            borderRadius: 8,
-                            border: "1px solid #bbb",
-                            background: "#f8f8f8",
-                            color: "#222"
-                          }}
-                        >
-                          {avatarOptions.map(opt => (
-                            <option key={opt.value} value={opt.value}>{opt.label}</option>
-                          ))}
-                        </select>
-                        <button
-                          style={{
-                            width: "100%",
-                            padding: "10px 0",
-                            border: "none",
-                            borderRadius: 8,
-                            background: "#3498db",
-                            color: "#fff",
-                            marginBottom: 10,
-                            cursor: "pointer",
-                            fontWeight: 600
-                          }}
-                          onClick={handleProfileSave}
-                        >
-                          Save
-                        </button>
-                        <button
-                          style={{
-                            width: "100%",
-                            padding: "10px 0",
-                            border: "none",
-                            borderRadius: 8,
-                            background: "#bbb",
-                            color: "#222",
-                            cursor: "pointer"
-                          }}
-                          onClick={() => setEditMode(false)}
-                        >
-                          Cancel
-                        </button>
-                      </>
+            <div style={{ cursor: "pointer", position: "relative" }}>
+              {profileData.profileIcon && profileData.profileIcon !== "default" ? (
+                <img
+                  src={getAvatarSrc(profileData.profileIcon)}
+                  alt="Profile"
+                  style={{ width: 36, height: 36, borderRadius: "50%", border: "2px solid #eee" }}
+                  onClick={handleProfileClick}
+                />
+              ) : (
+                <FaUserCircle size={36} color="#888" onClick={handleProfileClick} />
+              )}
+              {/* Profile Popup */}
+              {showProfilePopup && (
+                <div
+                  ref={popupRef}
+                  id="profile-popup"
+                  style={{
+                    position: "absolute",
+                    top: 44,
+                    right: 0,
+                    background: "#fff",
+                    border: "1px solid #444",
+                    borderRadius: 16,
+                    boxShadow: "0 4px 16px rgba(0,0,0,0.18)",
+                    minWidth: 320,
+                    zIndex: 100,
+                    padding: 24,
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "center",
+                    color: "#222"
+                  }}
+                >
+                  {/* Large avatar */}
+                  <div style={{ marginBottom: 18 }}>
+                    {profileData.profileIcon && profileData.profileIcon !== "default" ? (
+                      <img
+                        src={getAvatarSrc(profileData.profileIcon)}
+                        alt="Profile"
+                        style={{ width: 90, height: 90, borderRadius: "50%", border: "3px solid #3498db" }}
+                      />
                     ) : (
-                      <>
-                        <div style={{ fontWeight: "bold", marginBottom: 8, textAlign: "center", fontSize: 22 }}>
-                          {profileData.name || profileData.username || profileData.email}
-                        </div>
-                        <div style={{ fontSize: 15, color: "#666", marginBottom: 18, textAlign: "center" }}>
-                          {profileData.email}
-                        </div>
-                        <button
-                          style={{
-                            width: "100%",
-                            padding: "10px 0",
-                            border: "none",
-                            borderRadius: 8,
-                            background: "#3498db",
-                            color: "#fff",
-                            marginBottom: 10,
-                            cursor: "pointer",
-                            fontWeight: 600
-                          }}
-                          onClick={handleEditProfile}
-                        >
-                          Edit Profile
-                        </button>
-                        <button
-                          style={{
-                            width: "100%",
-                            padding: "10px 0",
-                            border: "none",
-                            borderRadius: 8,
-                            background: "#bbb",
-                            color: "#222",
-                            cursor: "pointer"
-                          }}
-                          onClick={() => setShowProfilePopup(false)}
-                        >
-                          Close
-                        </button>
-                      </>
+                      <FaUserCircle size={90} color="#3498db" />
                     )}
                   </div>
-                )}
-              </div>
-              <button onClick={() => setNavList(!navList)}>
-                {navList ? <i className="fa fa-times"></i> : <i className="fa fa-bars"></i>}
-              </button>
+                  {/* Show greeting message with user name */}
+                  <div style={{ fontWeight: "bold", marginBottom: 12, textAlign: "center", fontSize: 20, color: "#3498db" }}>
+                    {profileData && (profileData.name || profileData.username) && (
+                      <>hi {profileData.name || profileData.username}</>
+                    )}
+                  </div>
+                  {editMode ? (
+                    <>
+                      <input
+                        type="text"
+                        name="name"
+                        value={profileData.name || ""}
+                        onChange={handleProfileChange}
+                        placeholder="Name"
+                        style={{
+                          width: "95%",
+                          marginBottom: 10,
+                          padding: 8,
+                          borderRadius: 8,
+                          border: "1px solid #bbb",
+                          background: "#f8f8f8",
+                          color: "#222"
+                        }}
+                      />
+                      <input
+                        type="email"
+                        name="email"
+                        value={profileData.email || ""}
+                        onChange={handleProfileChange}
+                        placeholder="Email"
+                        style={{
+                          width: "95%",
+                          marginBottom: 10,
+                          padding: 8,
+                          borderRadius: 8,
+                          border: "1px solid #bbb",
+                          background: "#f8f8f8",
+                          color: "#222"
+                        }}
+                      />
+                      <input
+                        type="text"
+                        name="phone"
+                        value={profileData.phone || ""}
+                        onChange={handleProfileChange}
+                        placeholder="Phone"
+                        style={{
+                          width: "95%",
+                          marginBottom: 10,
+                          padding: 8,
+                          borderRadius: 8,
+                          border: "1px solid #bbb",
+                          background: "#f8f8f8",
+                          color: "#222"
+                        }}
+                      />
+                      <select
+                        name="profileIcon"
+                        value={profileData.profileIcon || "default"}
+                        onChange={handleProfileChange}
+                        style={{
+                          width: "95%",
+                          marginBottom: 18,
+                          padding: 8,
+                          borderRadius: 8,
+                          border: "1px solid #bbb",
+                          background: "#f8f8f8",
+                          color: "#222"
+                        }}
+                      >
+                        {avatarOptions.map(opt => (
+                          <option key={opt.value} value={opt.value}>{opt.label}</option>
+                        ))}
+                      </select>
+                      <button
+                        style={{
+                          width: "100%",
+                          padding: "10px 0",
+                          border: "none",
+                          borderRadius: 8,
+                          background: "#3498db",
+                          color: "#fff",
+                          marginBottom: 10,
+                          cursor: "pointer",
+                          fontWeight: 600
+                        }}
+                        onClick={handleProfileSave}
+                      >
+                        Save
+                      </button>
+                      <button
+                        style={{
+                          width: "100%",
+                          padding: "10px 0",
+                          border: "none",
+                          borderRadius: 8,
+                          background: "#bbb",
+                          color: "#222",
+                          cursor: "pointer"
+                        }}
+                        onClick={() => setEditMode(false)}
+                      >
+                        Cancel
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <div style={{ fontWeight: "bold", marginBottom: 8, textAlign: "center", fontSize: 22 }}>
+                        {profileData.name || profileData.username || profileData.email}
+                      </div>
+                      <div style={{ fontSize: 15, color: "#666", marginBottom: 18, textAlign: "center" }}>
+                        {profileData.email}
+                      </div>
+                      <button
+                        style={{
+                          width: "100%",
+                          padding: "10px 0",
+                          border: "none",
+                          borderRadius: 8,
+                          background: "#3498db",
+                          color: "#fff",
+                          marginBottom: 10,
+                          cursor: "pointer",
+                          fontWeight: 600
+                        }}
+                        onClick={handleEditProfile}
+                      >
+                        Edit Profile
+                      </button>
+                      <button
+                        style={{
+                          width: "100%",
+                          padding: "10px 0",
+                          border: "none",
+                          borderRadius: 8,
+                          background: "#bbb",
+                          color: "#222",
+                          cursor: "pointer"
+                        }}
+                        onClick={() => setShowProfilePopup(false)}
+                      >
+                        Close
+                      </button>
+                    </>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         </div>

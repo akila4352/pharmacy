@@ -13,7 +13,9 @@ import Header from "../common/header/Header";
 import PrescriptionScanner from "../home/Prescription/PrescriptionScanner";
 import ManageCalendar from "../pharmacy/ManageCalendar";
 import PharmacyDashboard from "../Admin/PharmacyDashboard";
- 
+ import PharmacyStock from "../pharmacy/PharmacyStock";
+import PharmacyLowStock from "../pharmacy/PharmacyLowStock";  
+import PharmacyDashboard2 from "../pharmacy/PharmacyDashboard";
 import ForgotPassword from "../home/Login/ForgotPassword"
 
 const Pages = () => {
@@ -34,6 +36,9 @@ const Pages = () => {
           <Route path="/headerpowner" element={<Headerpowner/>} />
           <Route path="/prescriptionScanner" element={<PrescriptionScanner/>} />
           <Route path="/manage-calendar" element={<ManageCalendar/>} />
+           <Route path="/pharmacy-stock" element={<PharmacyStock/>} />
+           <Route path="/pharmacy-low-stock" element={<PharmacyLowStock/>} />
+           <Route path="/pharmacy-dashboard" element={<PharmacyDashboard2/>} />
           
 
 <Route path="/forgot-password" element={<ForgotPassword />} />
