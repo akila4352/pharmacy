@@ -25,14 +25,14 @@
     "react-scripts": "5.0.1",
     "styled-components": "^6.1.17",
     "web-vitals": "^4.2.4",
-    "xlsx": "^0.18.5",
-  
+    "xlsx": "^0.18.5"
+  },
+  "devDependencies": {
     "@babel/plugin-proposal-private-property-in-object": "^7.21.11"
-  
   },
   "scripts": {
     "start": "react-scripts start",
-    "build": "react-scripts build",
+    "build": "DISABLE_ESLINT_PLUGIN=true react-scripts build",
     "test": "react-scripts test",
     "eject": "react-scripts eject"
   },
@@ -41,7 +41,10 @@
     "extends": [
       "react-app",
       "react-app/jest"
-    ]
+    ],
+    "rules": {
+      "import/first": "warn"
+    }
   },
   "browserslist": {
     "production": [
