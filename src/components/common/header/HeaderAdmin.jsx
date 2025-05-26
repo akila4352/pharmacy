@@ -8,9 +8,8 @@ const HeaderAdmin = () => {
   return (
 
       <header>
-        <div className="container flex">
-          <div className="logo">
-            <img src="./images/logo.png" alt="logo" style={{ width: "75px", height: "auto" }} />
+        <div className="container flex">          <div className="logo">
+            <img src="/images/logo.png" alt="logo" style={{ width: "75px", height: "auto" }} />
           </div>
           <div className="nav">
             <ul className={navList ? "small" : "flex"}>  
