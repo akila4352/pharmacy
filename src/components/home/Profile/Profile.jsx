@@ -63,11 +63,14 @@ const Profile = () => {  const [user, setUser] = useState(null);
               </div>
             </div>
           </div>
-          
-          <div className="profile-actions">
+            <div className="profile-actions">
             <Link to="/prescriptionScanner" className="action-button">
               <i className="fas fa-capsules"></i>
               Scan New Prescription
+            </Link>
+            <Link to="/Hero" className="action-button">
+              <i className="fas fa-home"></i>
+              Back to Home
             </Link>
           </div>
         </div>

@@ -30,8 +30,7 @@ const Header = () => {
         <div className="container flex">
           <div className="logo">
             <img src="/images/logo.png" alt="logo" style={{ width: "75px", height: "auto" }} />
-          </div>
-          <div className="nav">
+          </div>          <div className="nav">
             <ul className={navList ? "small" : "flex"}>
               <li>
                 <Link to="/Hero">Home</Link>
@@ -40,10 +39,19 @@ const Header = () => {
               <li>
                 <Link to="/prescriptionScanner">Prescription Scanner</Link>
               </li>
+
+               <li>
+                <Link to="/chat-with-admin">chat-with-admin</Link>
+              </li>
+              
+              {user && (
+                <li>
+                  <Link to="/profile">My Profile</Link>
+                </li>
+              )}
             </ul>
           </div>
-          
-          {user ? (
+            {user ? (
             <div className="user-profile">
               <div 
                 className="profile-icon" 
@@ -61,7 +69,7 @@ const Header = () => {
                     <p className="email">{user.email}</p>
                   </div>
                   <ul>
-                    <li><Link to="/profile">My Profile</Link></li>
+                    <li><Link to="/profile" onClick={() => setShowProfileMenu(false)}>My Profile</Link></li>
                     <li><button onClick={handleLogout}>Logout</button></li>
                   </ul>
                 </div>

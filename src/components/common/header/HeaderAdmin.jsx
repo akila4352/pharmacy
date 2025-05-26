@@ -13,10 +13,14 @@ const HeaderAdmin = () => {
             <img src="./images/logo.png" alt="logo" style={{ width: "75px", height: "auto" }} />
           </div>
           <div className="nav">
-            <ul className={navList ? "small" : "flex"}>
+            <ul className={navList ? "small" : "flex"}>  
       
               <li>
                 <Link to="/manage-Pharmacy-medicines">Home</Link>
+              </li>
+
+              <li>
+                <Link to="/alert">Alerts</Link>
               </li>
            
         
