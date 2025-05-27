@@ -21,6 +21,9 @@ const PrescriptionScanner = () => {
     }
   };
 
+  // Use environment variable for backend URL
+  const API_URL = process.env.REACT_APP_BACKEND_URL || "http://localhost:5000";
+
   const handleScan = async () => {
     if (!selectedFile) {
       setError('Please select an image first');
@@ -35,7 +38,7 @@ const PrescriptionScanner = () => {
 
     try {
       // Call the backend Python OCR endpoint
-      const response = await axios.post('http://localhost:5000/api/prescription/scan', formData, {
+      const response = await axios.post(`${API_URL}/api/prescription/scan`, formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
