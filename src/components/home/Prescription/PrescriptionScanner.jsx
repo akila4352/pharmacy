@@ -22,8 +22,8 @@ const PrescriptionScanner = () => {
     }
   };
 
-  // Use local backend URL always
-  const API_URL = "http://localhost:5000";
+  // Use environment variable for backend URL
+  const API_URL = process.env.REACT_APP_BACKEND_URL;
 
   const handleScan = async () => {
     if (!selectedFile) {
