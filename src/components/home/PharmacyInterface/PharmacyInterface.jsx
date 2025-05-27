@@ -4,14 +4,16 @@ const PharmacyInterface = () => {
   const [prescriptions, setPrescriptions] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  const API_URL = process.env.REACT_APP_BACKEND_URL || "http://localhost:5000";
+
   useEffect(() => {
     fetchPrescriptions();
   }, []);
-
+ 
   const fetchPrescriptions = async () => {
     try {
       const token = localStorage.getItem('token'); // Assuming you store the token in localStorage
-      const response = await fetch('http://localhost:5000/api/pharmacy/prescriptions', {
+      const response = await fetch(`${API_URL}/api/pharmacy/prescriptions`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -28,7 +30,7 @@ const PharmacyInterface = () => {
   const handleAvailabilityUpdate = async (prescriptionId, isAvailable, price) => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch('http://localhost:5000/api/pharmacy/update-availability', {
+      const response = await fetch(`${API_URL}/api/pharmacy/update-availability`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,

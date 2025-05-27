@@ -9,7 +9,7 @@ const avatarOptions = [
   { value: "avatar1", label: "Avatar 1", src: "/user-icons/avatar1.png" },
   { value: "avatar2", label: "Avatar 2", src: "/user-icons/avatar2.png" }
 ];
-
+ 
 const Headerpowner = () => {
   const [navList, setNavList] = useState(false); // State to toggle navigation list
   const [hasLowStock, setHasLowStock] = useState(false);
@@ -27,7 +27,7 @@ const Headerpowner = () => {
     localStorage.setItem("userProfile", JSON.stringify(profileData));
     if (profileData._id) {
       try {
-        await fetch(`${process.env.REACT_APP_API_URL || "http://localhost:5000"}/api/users/${profileData._id}`, {
+        await fetch(`${process.env.REACT_APP_BACKEND_URL || "http://localhost:5000"}/api/users/${profileData._id}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -83,7 +83,8 @@ const Headerpowner = () => {
     const checkLowStock = () => {
       const user = JSON.parse(localStorage.getItem("user"));
       if (!user) return;
-      fetch(`http://localhost:5000/api/pharmacies/owner/${user.id}`)
+      const API_URL = process.env.REACT_APP_BACKEND_URL || "http://localhost:5000";
+      fetch(`${API_URL}/api/pharmacies/owner/${user.id}`)
         .then(res => res.json())
         .then(data => {
           // If any stock item has quantity < 100, setHasLowStock(true)

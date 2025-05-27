@@ -12,7 +12,7 @@ const PharmacyOwnerDashboard = () => {
     isAvailable: true,
     recommended: "",
     price: 0,
-  });
+  }); 
   const [editMedicine, setEditMedicine] = useState(null);
   const [errorMessage, setErrorMessage] = useState("");
 

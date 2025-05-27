@@ -32,7 +32,7 @@ const BoxContainer = styled.div`
   position: relative;
   overflow: hidden;
   padding: 2em 1.5em;
-`;
+`; 
 
 const HeaderText = styled.h2`
   font-size: 26px;
@@ -103,7 +103,8 @@ function ForgotPassword() {
     setMsg("");
     setError("");
     try {
-      const response = await fetch("http://localhost:5000/api/auth/forgot-password", {
+      const API_URL = process.env.REACT_APP_BACKEND_URL || "http://localhost:5000";
+      const response = await fetch(`${API_URL}/api/auth/forgot-password`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email }),
@@ -126,7 +127,8 @@ function ForgotPassword() {
     setMsg("");
     setError("");
     try {
-      const response = await fetch("http://localhost:5000/api/auth/reset-password", {
+      const API_URL = process.env.REACT_APP_BACKEND_URL || "http://localhost:5000";
+      const response = await fetch(`${API_URL}/api/auth/reset-password`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, otp, newPassword }),

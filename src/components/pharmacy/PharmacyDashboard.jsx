@@ -32,7 +32,8 @@ function PharmacyDashboard() {
 
   // Fetch pharmacy info (assume endpoint returns current pharmacy for logged-in owner)
   useEffect(() => {
-    fetch("http://localhost:5000/api/pharmacies/my")
+    const API_URL = process.env.REACT_APP_BACKEND_URL || "http://localhost:5000";
+    fetch(`${API_URL}/api/pharmacies/my`)
       .then(res => res.json())
       .then(data => setPharmacy(data))
       .catch(() => setPharmacy(null));
@@ -40,7 +41,8 @@ function PharmacyDashboard() {
 
   const fetchReport = () => {
     setLoading(true);
-    fetch(`http://localhost:5000/api/medicine-search/all?filter=${filter}`)
+    const API_URL = process.env.REACT_APP_BACKEND_URL || "http://localhost:5000";
+    fetch(`${API_URL}/api/medicine-search/all?filter=${filter}`)
       .then(res => res.json())
       .then(data => {
         // Remove duplicates by medicine name and sum their counts
@@ -106,7 +108,7 @@ function PharmacyDashboard() {
       },
     },
   };
-
+ 
   // Handle photo upload
   const handlePhotoChange = async (e) => {
     const file = e.target.files[0];
@@ -116,7 +118,8 @@ function PharmacyDashboard() {
     const formData = new FormData();
     formData.append("photo", file);
     try {
-      const res = await fetch(`http://localhost:5000/api/pharmacies/${pharmacy._id}/photo`, {
+      const API_URL = process.env.REACT_APP_BACKEND_URL || "http://localhost:5000";
+      const res = await fetch(`${API_URL}/api/pharmacies/${pharmacy._id}/photo`, {
         method: "POST",
         body: formData,
       });

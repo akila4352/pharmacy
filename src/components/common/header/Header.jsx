@@ -9,7 +9,7 @@ const avatarOptions = [
   { value: "avatar1", label: "Avatar 1", src: "/user-icons/avatar1.png" },
   { value: "avatar2", label: "Avatar 2", src: "/user-icons/avatar2.png" }
 ];
-
+ 
 const Header = () => {
   const [navList, setNavList] = useState(false);
   const [showProfilePopup, setShowProfilePopup] = useState(false);
@@ -26,7 +26,7 @@ const Header = () => {
     // If user is logged in and has an id, update backend
     if (profileData._id) {
       try {
-        await fetch(`${process.env.REACT_APP_API_URL || "http://localhost:5000"}/api/users/${profileData._id}`, {
+        await fetch(`${process.env.REACT_APP_BACKEND_URL || "http://localhost:5000"}/api/users/${profileData._id}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({

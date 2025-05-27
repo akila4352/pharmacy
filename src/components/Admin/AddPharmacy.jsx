@@ -1,9 +1,10 @@
 import React, { useState } from "react";
 import * as XLSX from "xlsx";
 import Headerpowner from "../common/header/Headerpowner";
-import Heading from "../common/Heading";
+import Heading from "../common/Heading"; 
 
-const API_URL = process.env.REACT_APP_API_URL || "http://localhost:5000";
+// Use the correct environment variable for backend URL
+const API_URL = process.env.REACT_APP_BACKEND_URL || "http://localhost:5000";
 
 const UpdateStock = () => {
   const [message, setMessage] = useState("");

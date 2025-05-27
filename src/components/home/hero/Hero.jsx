@@ -154,7 +154,7 @@ function getDistanceKm(lat1, lng1, lat2, lng2) {
   return R * c;
 }
 
-const API_URL = process.env.REACT_APP_API_URL || "http://localhost:5000";
+const API_URL = process.env.REACT_APP_BACKEND_URL || "http://localhost:5000";
 
 const Hero = () => {
   const [userLocation, setUserLocation] = useState(null);
@@ -481,7 +481,7 @@ const Hero = () => {
                         className={selectedPharmacy && selectedPharmacy._id === pharmacy._id ? "selected-row" : ""}
                         style={{ cursor: "pointer" }}
                       >
-                        <td>{pharmacy.name}</td>
+                        <td>{pharmacy.name}</td> 
                         <td>{pharmacy.address}</td>
                         <td>
                           {contactNumber ? (

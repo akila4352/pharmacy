@@ -11,8 +11,8 @@ import {
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 
-const API_URL = process.env.REACT_APP_API_URL || "http://localhost:5000";
-
+const API_URL = process.env.REACT_APP_BACKEND_URL || "http://localhost:5000";
+ 
 const customMarkerIcon = new L.Icon({
   iconUrl: "https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon.png",
   iconSize: [25, 41],

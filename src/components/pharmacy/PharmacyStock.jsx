@@ -10,7 +10,7 @@ const tableStyle = {
   boxShadow: "0 2px 8px rgba(0,0,0,0.07)",
   marginTop: 24,
 };
-
+ 
 const thStyle = {
   background: "#f7c815",
   color: "#222",
@@ -49,7 +49,8 @@ function PharmacyStock() {
     setLoading(true);
     const user = JSON.parse(localStorage.getItem("user"));
     if (!user) return;
-    fetch(`http://localhost:5000/api/pharmacies/owner/${user.id}`)
+    const API_URL = process.env.REACT_APP_BACKEND_URL || "http://localhost:5000";
+    fetch(`${API_URL}/api/pharmacies/owner/${user.id}`)
       .then(res => res.json())
       .then(data => {
         setStock(data?.stock || []);

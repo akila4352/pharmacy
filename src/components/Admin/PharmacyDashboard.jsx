@@ -5,8 +5,8 @@ import "leaflet/dist/leaflet.css";
 
 import HeaderAdmin from "../common/header/HeaderAdmin";
 
-const API_URL = process.env.REACT_APP_API_URL || "http://localhost:5000";
-
+const API_URL = process.env.REACT_APP_BACKEND_URL || "http://localhost:5000";
+ 
 // Define pharmacy marker icon
 const pharmacyMarkerIcon = new L.Icon({
   iconUrl: "https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon.png",
