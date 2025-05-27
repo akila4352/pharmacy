@@ -109,3 +109,27 @@ header .button {
     display: block;
   }
 }
+
+/* Dark Mode Styles */
+.dashboard-root.dark-mode header {
+  background: #232733;
+  color: #e0e6ef;
+  box-shadow: 0 5px 30px rgb(0 22 84 / 18%);
+}
+
+.dashboard-root.dark-mode header a {
+  color: #e0e6ef;
+}
+
+.dashboard-root.dark-mode header a:hover {
+  color: #7ecfff;
+}
+
+.dashboard-root.dark-mode header span {
+  background: #3498db;
+  color: #fff;
+}
+
+.dashboard-root.dark-mode header .toggle {
+  color: #e0e6ef;
+}

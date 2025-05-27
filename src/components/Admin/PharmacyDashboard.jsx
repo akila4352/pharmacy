@@ -41,6 +41,10 @@ const PharmacyDashboard = () => {
   const [editStock, setEditStock] = useState(null); // Track the medicine being edited
   const [mapLocation, setMapLocation] = useState(null); // Track location for the map modal
   const [ownerDetails, setOwnerDetails] = useState(null); // Track owner details
+  const [darkMode, setDarkMode] = useState(() => {
+    // Persist mode in localStorage
+    return localStorage.getItem("darkMode") === "true";
+  });
 
   const defaultCenter = { lat: 6.0535, lng: 80.2210 };
 
@@ -68,6 +72,10 @@ const PharmacyDashboard = () => {
       totalOwners: pharmacyOwners.length,
     });
   }, [pharmacies, users, pharmacyOwners]);
+
+  useEffect(() => {
+    localStorage.setItem("darkMode", darkMode);
+  }, [darkMode]);
 
   const fetchAllPharmacies = async () => {
     try {
@@ -350,8 +358,26 @@ const PharmacyDashboard = () => {
 };
 
   return (
-    <div>
+    <div className={darkMode ? "dashboard-root dark-mode" : "dashboard-root"}>
       <HeaderAdmin />
+      <div style={{ display: "flex", justifyContent: "flex-end", margin: "12px 0 0 0" }}>
+        <button
+          onClick={() => setDarkMode((d) => !d)}
+          style={{
+            background: darkMode ? "#222" : "#fff",
+            color: darkMode ? "#fff" : "#222",
+            border: "1px solid #ccc",
+            borderRadius: 8,
+            padding: "8px 18px",
+            cursor: "pointer",
+            fontWeight: 600,
+            marginRight: 16,
+            boxShadow: "0 1px 4px rgba(0,0,0,0.07)"
+          }}
+        >
+          {darkMode ? "🌙 Dark Mode" : "☀️ Light Mode"}
+        </button>
+      </div>
       <div className="dashboard-container">
         <h2 className="dashboard-title">Admin Dashboard</h2>
 
@@ -384,6 +410,7 @@ const PharmacyDashboard = () => {
           <button 
             className={`tab-button ${activeTab === 'dashboard' ? 'active' : ''}`}
             onClick={() => setActiveTab('dashboard')}
+            style={{ color: activeTab === 'dashboard' ? 'white' : 'black' }}
           >
             <span className="tab-icon">🗺️</span>
             Pharmacy Map
@@ -391,6 +418,7 @@ const PharmacyDashboard = () => {
           <button 
             className={`tab-button ${activeTab === 'users' ? 'active' : ''}`}
             onClick={() => setActiveTab('users')}
+            style={{ color: activeTab === 'users' ? 'white' : 'black' }}
           >
             <span className="tab-icon">👤</span>
             Users
@@ -398,6 +426,7 @@ const PharmacyDashboard = () => {
           <button 
             className={`tab-button ${activeTab === 'owners' ? 'active' : ''}`}
             onClick={() => setActiveTab('owners')}
+            style={{ color: activeTab === 'owners' ? 'white' : 'black' }}
           >
             <span className="tab-icon">🏪</span>
             Pharmacy Owners
@@ -1073,6 +1102,98 @@ const PharmacyDashboard = () => {
       
       
       <style jsx>{`
+        .dashboard-root {
+          background: #f4f6fa;
+          min-height: 100vh;
+          color: #222;
+        }
+        .dashboard-root.dark-mode {
+          background: #181c23;
+          color: #e0e6ef;
+        }
+        .dashboard-root.dark-mode .dashboard-container {
+          background: #181c23;
+        }
+        .dashboard-root.dark-mode .dashboard-title {
+          color: #e0e6ef;
+        }
+        .dashboard-root.dark-mode .dashboard-card {
+          background: #232733;
+          color: #e0e6ef;
+        }
+        .dashboard-root.dark-mode .stat-card {
+          background: #3498db;
+          color: #fff;
+          box-shadow: 0 4px 10px rgba(0,0,0,0.22);
+        }
+        .dashboard-root.dark-mode .stat-value {
+          color: #fff;
+        }
+        .dashboard-root.dark-mode .stat-label {
+          color: #e0e6ef;
+        }
+        .dashboard-root.dark-mode .tab-button {
+          background: #232733;
+          color: #e0e6ef;
+          border-color: #232733;
+        }
+        .dashboard-root.dark-mode .tab-button.active {
+          background: #3498db;
+          color: #fff;
+        }
+        .dashboard-root.dark-mode .card-header {
+          background: #3498db;
+          color: #fff;
+        }
+        .dashboard-root.dark-mode .pharmacy-table th,
+        .dashboard-root.dark-mode .user-table th,
+        .dashboard-root.dark-mode .owner-table th {
+          background: #232733;
+          color: #7ecfff;
+        }
+        .dashboard-root.dark-mode .pharmacy-table tr:hover,
+        .dashboard-root.dark-mode .user-table tr:hover,
+        .dashboard-root.dark-mode .owner-table tr:hover {
+          background: #232733;
+        }
+        .dashboard-root.dark-mode .modal-content {
+          background: #232733;
+          color: #e0e6ef;
+        }
+        .dashboard-root.dark-mode .modal-header {
+          border-bottom: 1px solid #333a4a;
+        }
+        .dashboard-root.dark-mode .modal-footer {
+          border-top: 1px solid #333a4a;
+        }
+        .dashboard-root.dark-mode .form-group input,
+        .dashboard-root.dark-mode .form-group select {
+          background: #232733;
+          color: #e0e6ef;
+          border: 1px solid #444a5a;
+        }
+        .dashboard-root.dark-mode .save-button {
+          background: #3498db;
+          color: #fff;
+        }
+        .dashboard-root.dark-mode .cancel-button {
+          background: #232733;
+          color: #e0e6ef;
+          border: 1px solid #444a5a;
+        }
+        .dashboard-root.dark-mode .notification {
+          background: #232733;
+          color: #fff;
+        }
+        .dashboard-root.dark-mode .success {
+          background: #27ae60;
+        }
+        .dashboard-root.dark-mode .error {
+          background: #e74c3c;
+        }
+        .dashboard-root.dark-mode .info {
+          background: #3498db;
+        }
         .dashboard-container {
           padding: 24px;
           max-width: 1200px;
@@ -1093,7 +1214,8 @@ const PharmacyDashboard = () => {
         }
         
         .stat-card {
-          background-color: #fff;
+          background-color: #3498db;
+          color: #fff;
           border-radius: 10px;
           padding: 20px;
           text-align: center;
@@ -1113,11 +1235,11 @@ const PharmacyDashboard = () => {
         .stat-value {
           font-size: 24px;
           font-weight: bold;
-          color: #3498db;
+          color: #fff;
         }
         
         .stat-label {
-          color: #7f8c8d;
+          color: #fff;
           font-size: 14px;
           margin-top: 6px;
         }
@@ -1146,7 +1268,7 @@ const PharmacyDashboard = () => {
         
         .tab-button.active {
           background-color: #3498db;
-          color: white;
+          color: #fff;
           border-color: #3498db;
         }
         
@@ -1291,8 +1413,13 @@ const PharmacyDashboard = () => {
           background-color: #f0f0f0;
         }
         
+        .delete-button {
+          background-color: #e74c3c;
+          color: #fff;
+        }
+
         .delete-button:hover {
-          background-color: #ffecec;
+          background-color: #c0392b;
         }
         
         .status-available {
@@ -1419,7 +1546,6 @@ const PharmacyDashboard = () => {
         .info {
           background-color: #3498db;
         }
-        
         /* Responsive adjustments */
         @media (max-width: 768px) {
           .search-form {

@@ -90,10 +90,13 @@ const HeaderAdmin = () => {
           {profileData && (profileData.name || profileData.username) && (
             <span style={{
               fontWeight: 600,
-              color: "#3498db",
+              color: "#fff",
+              background: "#3498db",
               fontSize: 18,
               marginRight: 8,
-              letterSpacing: 0.5
+              letterSpacing: 0.5,
+              borderRadius: 8,
+              padding: "4px 12px"
             }}>
               hi {profileData.name || profileData.username}
             </span>
