@@ -355,6 +355,9 @@ function Register() {
     }));
   };
 
+  // Use environment variable for backend URL
+  const API_URL = process.env.REACT_APP_BACKEND_URL || "http://localhost:5000";
+
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -379,7 +382,7 @@ function Register() {
     // formData.password = hashFunction(formData.password);
 
     try {
-      const response = await fetch("http://localhost:5000/api/auth/register", {
+      const response = await fetch(`${API_URL}/api/auth/register`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -406,7 +409,7 @@ function Register() {
     e.preventDefault();
     setOtpError("");
     try {
-      const response = await fetch("http://localhost:5000/api/auth/verify-otp", {
+      const response = await fetch(`${API_URL}/api/auth/verify-otp`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -429,7 +432,7 @@ function Register() {
     setResendStatus("Sending...");
     setOtpError("");
     try {
-      const response = await fetch("http://localhost:5000/api/auth/resend-otp", {
+      const response = await fetch(`${API_URL}/api/auth/resend-otp`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
